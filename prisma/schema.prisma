@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  serviceType     String            // "grooming" | "vet"
+
+  package         String?           // "banho" | "banho-tosa" | "spa"
+  addons          String[]
+
+  unitId          String
+  professional    String?
+
+  petName         String
+  petBreed        String?
+  petSize         String?           // "small" | "medium" | "large"
+
+  tutorName       String
+  phone           String
+  email           String?
+
+  appointmentDate DateTime
+  appointmentTime String
+
+  paymentId       String?           // ID da preferência Mercado Pago
+  paymentStatus   PaymentStatus     @default(PENDING)
+  totalPrice      Decimal           @db.Decimal(10, 2)
+
+  status          AppointmentStatus @default(AWAITING_PAYMENT)
+
+  notes           String?
+
+  @@index([unitId])
+  @@index([status])
+  @@index([appointmentDate])
+  @@index([paymentStatus])
+}
+
+enum AppointmentStatus {
+  AWAITING_PAYMENT
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REFUNDED
+}
