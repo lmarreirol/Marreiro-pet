@@ -12,9 +12,8 @@ export default function Hero() {
         <div>
           <div className="eyebrow"><span className="dot" /> 4 unidades no Ceará · atendimento humanizado</div>
           <h1>
-            Cuidado completo<br />
-            para quem faz parte<br />
-            <span className="accent-orange">da sua família</span>
+            Cuidando de quem<br />
+            <span className="accent-orange">te faz tão bem</span>
           </h1>
           <p className="hero-sub">
             Clínica veterinária, banho e tosa, vacinação e delivery de ração — tudo em um só lugar, com equipe especializada e apaixonada por cães e gatos.

@@ -49,7 +49,7 @@ export default function Footer() {
         </div>
         <div className="footer-bottom">
           <span>© 2026 Marreiro Pet · Todos os direitos reservados</span>
-          <span>CRMV-CE 1234 · CNPJ 00.000.000/0001-00</span>
+          <span>CNPJ 00.000.000/0001-00</span>
         </div>
       </div>
     </footer>
