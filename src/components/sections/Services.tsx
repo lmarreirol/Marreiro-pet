@@ -74,7 +74,7 @@ export default function Services() {
                   sessionStorage.setItem('preselect-service', 'vacina')
                   document.getElementById('agendar')?.scrollIntoView({ behavior: 'smooth' })
                 } else {
-                  setActiveService({ message: s.message, isClinic: s.title === 'Clínica Veterinária' })
+                  setActiveService({ message: s.message, isClinic: s.title === 'Clínica Veterinária' || s.title === 'Farmácia Veterinária' })
                 }
               }}
             >

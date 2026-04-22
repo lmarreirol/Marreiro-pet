@@ -75,6 +75,22 @@ enum UserRole {
   RECEPTIONIST
 }
 
+model AdoptionPet {
+  id          String   @id @default(cuid())
+  name        String
+  species     String   // "cachorro" | "gato"
+  breed       String?
+  age         String?
+  gender      String   // "macho" | "femea"
+  size        String?  // "pequeno" | "medio" | "grande"
+  description String?
+  imageUrl    String?
+  available   Boolean  @default(true)
+  status      String   @default("disponivel")
+  unitId      String?
+  createdAt   DateTime @default(now())
+}
+
 model Availability {
   id           String   @id @default(cuid())
   professional String

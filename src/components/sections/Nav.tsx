@@ -20,6 +20,7 @@ export default function Nav() {
           <a href="#servicos">Serviços</a>
           <a href="#sobre">Sobre</a>
           <a href="#unidades">Unidades</a>
+          <a href="/adocao" style={{ color: '#EF7720', fontWeight: 800 }}>❤️ Adoção</a>
           <a href="#blog">Dicas</a>
           <a href="#contato">Contato</a>
         </nav>

@@ -43,7 +43,7 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="hero-visual" style={{ maxWidth: 540, height: 580 }}>
+        <div className="hero-visual" style={{ maxWidth: 420, height: 460 }}>
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             <Image
               src="/hero.png"
