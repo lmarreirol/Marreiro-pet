@@ -1,17 +1,18 @@
 import Icon from '@/components/ui/Icon'
+import Image from 'next/image'
 
 export default function About() {
   return (
     <section className="section about-section about" id="sobre">
       <div className="container about-grid">
         <div className="about-visual">
-          <div className="about-visual-label">[ foto da equipe Marreiro Pet ]</div>
+          <Image src="/equipe.jpg" alt="Equipe Marreiro Pet" width={600} height={500} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 20 }} />
         </div>
         <div>
           <div className="section-eyebrow">Sobre o Marreiro Pet</div>
-          <h2>Uma família cuidando<br />da sua família.</h2>
+          <h2>Nascemos do amor.<br />Crescemos com você.</h2>
           <p className="about-lead">
-            Há mais de 15 anos, o Marreiro Pet nasceu do amor por animais e do desejo de oferecer atendimento veterinário acessível, humano e de qualidade no Ceará. Hoje, somos referência em Caucaia, Pecém, São Gonçalo do Amarante e Taíba.
+            Desde 2018, o Marreiro Pet cuida dos pets com carinho, estrutura completa e equipe especializada. Hoje somos referência em Caucaia, Pecém, São Gonçalo do Amarante e Taíba — porque seu pet merece o melhor.
           </p>
           <div className="about-features">
             <div className="about-feat">

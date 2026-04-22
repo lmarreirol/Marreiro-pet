@@ -1,5 +1,6 @@
 'use client'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import Icon from '@/components/ui/Icon'
 
 const GROOMING_SIZES = [
@@ -10,63 +11,86 @@ const GROOMING_SIZES = [
 
 const GROOMING_PACKAGES = [
   {
-    id: 'banho', name: 'Banho Tradicional',
+    id: 'banho', name: 'Banho Tradicional', icon: 'bath' as const, durationMin: 30,
     desc: 'Banho com produtos específicos, secagem, escovação e perfume.',
-    includes: ['Banho', 'Secagem', 'Escovação', 'Perfume', 'Laço/gravata'],
-    prices: { small: 55, medium: 75, large: 95 },
+    includes: ['Banho', 'Secagem', 'Escovação', 'Perfume', 'Laço/gravata', 'Corte de Unhas', 'Limpeza de ouvidos'],
+    prices: { small: 49, medium: 60, large: 90 },
   },
   {
-    id: 'banho-tosa', name: 'Banho + Tosa Higiênica', badge: 'Popular',
+    id: 'banho-tosa', name: 'Banho + Tosa Higiênica', icon: 'scissors' as const, badge: 'Popular', durationMin: 45,
     desc: 'Banho completo com tosa higiênica nas patas, barriga e região íntima.',
-    includes: ['Banho completo', 'Tosa higiênica', 'Corte de unhas', 'Limpeza de ouvidos'],
-    prices: { small: 75, medium: 95, large: 125 },
+    includes: ['Banho completo', 'Tosa higiênica'],
+    prices: { small: 72, medium: 90, large: 120 },
   },
   {
-    id: 'spa', name: 'Tosa Completa + Spa',
+    id: 'spa', name: 'Tosa Completa + Banho', icon: 'scissors' as const, durationMin: 60,
     desc: 'Experiência completa: tosa na tesoura ou máquina + tratamento spa com hidratação profunda.',
-    includes: ['Tosa na tesoura', 'Hidratação spa', 'Escovação', 'Corte de unhas', 'Perfume premium'],
-    prices: { small: 120, medium: 150, large: 180 },
+    includes: ['Tosa na tesoura', 'Escovação', 'Corte de unhas', 'Perfume premium'],
+    prices: { small: 109, medium: 120, large: 150 },
   },
 ]
 
 const GROOMING_ADDONS = [
-  { id: 'hidra', name: 'Hidratação de pelos', sub: 'Máscara profissional', price: 25 },
-  { id: 'ozonio', name: 'Banho de ozônio', sub: 'Terapêutico, alivia coceira', price: 35 },
-  { id: 'dentes', name: 'Escovação de dentes', sub: 'Hálito fresco', price: 15 },
-  { id: 'unhas', name: 'Corte de unhas extra', sub: 'Quando não inclui', price: 12 },
-  { id: 'perfume', name: 'Perfume premium', sub: 'Perfumaria pet importada', price: 18 },
-  { id: 'coloracao', name: 'Coloração criativa', sub: 'Tinta pet-safe', price: 45 },
+  { id: 'hidra', name: 'Hidratação de pelos', sub: 'Máscara profissional', price: 28, badge: 'Popular', durationMin: 5 },
+  { id: 'ozonio', name: 'Banho Luxo', sub: 'Shampoo super premium + máscara de hidratação profunda para pelos sedosos e perfumados', price: 35, badge: 'Popular', durationMin: 5 },
+  { id: 'dentes', name: 'Escovação de dentes', sub: 'Hálito fresco', price: 10, badge: 'Popular', durationMin: 0 },
+  { id: 'unhas', name: 'Remoção de Subpelo', sub: 'Tratamento Premium Anti Queda de Pelos', price: 36, durationMin: 15 },
+  { id: 'perfume', name: 'Tonalização de Pelo', sub: 'Realça o brilho e uniformiza a coloração dos pelos', price: 18, durationMin: 5 },
+  { id: 'coloracao', name: 'Retirada de Nós', sub: 'Sessão de 1h para desamarrar nós e embaraços com cuidado', price: 60, durationMin: 30 },
 ]
 
-const GROOMING_TIMES = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00']
+const GROOMING_TIMES = ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30']
 
 const UNITS = [
-  { id: 'caucaia', name: 'Caucaia', sub: 'Parque Guadalajara' },
+  { id: 'caucaia', name: 'Caucaia', sub: 'Jurema' },
   { id: 'pecem', name: 'Pecém', sub: 'São Gonçalo do Amarante' },
   { id: 'saogoncalo', name: 'São Gonçalo', sub: 'Centro' },
   { id: 'taiba', name: 'Taíba', sub: 'São Gonçalo do Amarante' },
 ]
 
-const PROFESSIONALS = [
-  { id: 'vitor', name: 'Vitor Fernandes', sub: 'Tosador especialista' },
-  { id: 'daniele', name: 'Daniele Mendes', sub: 'Banhista & tosadora' },
-  { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' },
-]
+const PROFESSIONALS: Record<string, { id: string; name: string; sub: string }[]> = {
+  caucaia: [
+    { id: 'victor', name: 'Victor Lopes', sub: 'Grooming' },
+    { id: 'daniele', name: 'Daniele Santos', sub: 'Banhista' },
+    { id: 'eduarda', name: 'Eduarda', sub: 'Banhista' },
+    { id: 'israel', name: 'Israel', sub: 'Banhista' },
+    { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' },
+  ],
+  pecem: [
+    { id: 'vitoria', name: 'Vitória Duraes', sub: 'Grooming' },
+    { id: 'christian', name: 'Christian Fernandes', sub: 'Banhista' },
+    { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' },
+  ],
+  taiba: [
+    { id: 'andresa', name: 'Andresa Martins', sub: 'Grooming' },
+    { id: 'erica', name: 'Erica Melo', sub: 'Banhista' },
+    { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' },
+  ],
+  saogoncalo: [
+    { id: 'anderson', name: 'Anderson Correia', sub: 'Grooming' },
+    { id: 'carla', name: 'Carla Janaina', sub: 'Banhista' },
+    { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' },
+  ],
+}
 
 function fmtBRL(v: number) { return 'R$ ' + v.toFixed(2).replace('.', ',') }
+
+const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 function getNextDates(n: number) {
   const days = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
   const today = new Date()
   return Array.from({ length: n }, (_, i) => {
     const d = new Date(today)
-    d.setDate(today.getDate() + i + 1)
-    return { date: d, day: d.getDate(), label: days[d.getDay()], disabled: d.getDay() === 0 }
+    d.setDate(today.getDate() + i)
+    return { date: d, day: d.getDate(), month: MONTHS[d.getMonth()], label: days[d.getDay()], disabled: d.getDay() === 0 }
   })
 }
 
 type DateEntry = ReturnType<typeof getNextDates>[0]
 type PetSize = 'small' | 'medium' | 'large'
+
+const VIP_PRICE = 30
 
 interface GroomingState {
   size: PetSize | null
@@ -76,26 +100,28 @@ interface GroomingState {
   unit: string | null
   date: DateEntry | null
   time: string | null
+  vip: boolean
   petName: string
   petBreed: string
   tutorName: string
   phone: string
+  cpf: string
   notes: string
 }
 
 const initialState: GroomingState = {
   size: null, package: null, addons: [], professional: null, unit: null,
-  date: null, time: null, petName: '', petBreed: '', tutorName: '', phone: '', notes: '',
+  date: null, time: null, vip: false, petName: '', petBreed: '', tutorName: '', phone: '', cpf: '', notes: '',
 }
 
-function Recap({ data, total }: { data: GroomingState; total: number }) {
+function Recap({ data, total, totalDurationMin }: { data: GroomingState; total: number; totalDurationMin: number }) {
   const size = GROOMING_SIZES.find(s => s.id === data.size)
   const pkg = GROOMING_PACKAGES.find(p => p.id === data.package)
   const unit = UNITS.find(u => u.id === data.unit)
-  const pro = PROFESSIONALS.find(p => p.id === data.professional)
+  const pro = data.unit ? (PROFESSIONALS[data.unit] ?? []).find(p => p.id === data.professional) : null
   const addons = GROOMING_ADDONS.filter(a => data.addons.includes(a.id))
   return (
-    <div className="grooming-recap">
+    <div className="grooming-recap" id="resumo-agendamento">
       <h4>Resumo do agendamento</h4>
       <div className="recap-row"><span className="k">Pet</span><span className={`v ${!data.petName ? 'muted' : ''}`}>{data.petName || '—'}</span></div>
       <div className={`recap-row ${!size ? 'muted' : ''}`}><span className="k">Porte</span><span className="v">{size ? `${size.name} (${size.kg})` : '—'}</span></div>
@@ -104,6 +130,8 @@ function Recap({ data, total }: { data: GroomingState; total: number }) {
       <div className={`recap-row ${!pro ? 'muted' : ''}`}><span className="k">Profissional</span><span className="v">{pro?.name || '—'}</span></div>
       <div className={`recap-row ${!unit ? 'muted' : ''}`}><span className="k">Unidade</span><span className="v">{unit?.name || '—'}</span></div>
       <div className={`recap-row ${!data.date ? 'muted' : ''}`}><span className="k">Data & hora</span><span className="v">{data.date ? `${data.date.day}/${((data.date.date.getMonth()) + 1).toString().padStart(2, '0')} às ${data.time || '—'}` : '—'}</span></div>
+      {totalDurationMin > 0 && <div className="recap-row"><span className="k">Duração</span><span className="v">~{totalDurationMin} min</span></div>}
+      {data.vip && <div className="recap-row"><span className="k">⭐ Encaixe VIP</span><span className="v" style={{ color: '#EF7720', fontWeight: 800 }}>+ R$ {VIP_PRICE},00</span></div>}
       <div className="recap-total">
         <div className="recap-total-label">Total estimado</div>
         <div className="recap-total-value">{fmtBRL(total)}</div>
@@ -118,27 +146,56 @@ export default function GroomingSection() {
   const [data, setData] = useState<GroomingState>(initialState)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const dates = useMemo(() => getNextDates(14), [])
+  const [availableSlots, setAvailableSlots] = useState<string[] | null>(null)
+  const [dateOffset, setDateOffset] = useState(0)
+  const allDates = useMemo(() => getNextDates(60), [])
+  const dates = allDates.slice(dateOffset, dateOffset + 14)
   const TOTAL = 5
 
   const update = (patch: Partial<GroomingState>) => setData(d => ({ ...d, ...patch }))
   const toggleAddon = (id: string) => setData(d => ({ ...d, addons: d.addons.includes(id) ? d.addons.filter(x => x !== id) : [...d.addons, id] }))
 
+  useEffect(() => {
+    const pkg = sessionStorage.getItem('preselect-package')
+    if (pkg) { update({ package: pkg }); sessionStorage.removeItem('preselect-package') }
+  }, [])
+
+  useEffect(() => {
+    if (!data.professional || !data.date) { setAvailableSlots(null); return }
+    const dateStr = data.date.date.toISOString().split('T')[0]
+    fetch(`/api/availability?professional=${data.professional}&date=${dateStr}`)
+      .then(r => r.json())
+      .then(d => setAvailableSlots(Array.isArray(d.slots) ? d.slots : []))
+      .catch(() => setAvailableSlots(null))
+  }, [data.professional, data.date])
+
   const pkg = GROOMING_PACKAGES.find(p => p.id === data.package)
   const base = pkg && data.size ? pkg.prices[data.size] : 0
-  const addonsTotal = GROOMING_ADDONS.filter(a => data.addons.includes(a.id)).reduce((s, a) => s + a.price, 0)
-  const total = base + addonsTotal
+  const selectedAddons = GROOMING_ADDONS.filter(a => data.addons.includes(a.id))
+  const addonsTotal = selectedAddons.reduce((s, a) => s + a.price, 0)
+  const total = base + addonsTotal + (data.vip ? VIP_PRICE : 0)
+  const totalDurationMin = (pkg?.durationMin ?? 0) + selectedAddons.reduce((s, a) => s + a.durationMin, 0)
+  const slotsNeeded = Math.ceil(totalDurationMin / 30) || 1
 
   const canNext = () => {
-    if (step === 0) return data.size && data.package
+    if (step === 0) return !!data.package
     if (step === 1) return true
     if (step === 2) return data.professional && data.unit
     if (step === 3) return data.date && data.time
-    if (step === 4) return data.petName && data.tutorName && data.phone
+    if (step === 4) return data.petName && data.tutorName && data.phone && data.cpf && data.size
     return false
   }
 
-  const next = () => { if (step < TOTAL) setStep(s => s + 1) }
+  const next = () => {
+    if (step < TOTAL) {
+      setStep(s => s + 1)
+      setTimeout(() => {
+        const form = document.querySelector('.grooming-form')
+        const el = form || document.getElementById('resumo-agendamento')
+        if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 100, behavior: 'smooth' })
+      }, 50)
+    }
+  }
   const back = () => setStep(s => Math.max(0, s - 1))
 
   const handleConfirm = async () => {
@@ -163,6 +220,7 @@ export default function GroomingSection() {
           date: data.date?.date.toISOString(),
           time: data.time,
           totalPrice: total,
+          isVip: data.vip,
         }),
       })
       const json = await res.json()
@@ -178,23 +236,17 @@ export default function GroomingSection() {
   return (
     <section className="grooming-section" id="banho-tosa">
       <div className="container">
-        <div className="grooming-hero">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
           <div>
             <div className="section-eyebrow">Banho & Tosa · agendamento completo</div>
-            <h2>Seu pet saindo <span className="accent">impecável</span>,<br />do jeito que ele merece.</h2>
-            <p style={{ fontSize: 17, color: 'var(--ink-soft)', marginTop: 18, lineHeight: 1.6 }}>
-              Monte o atendimento ideal: escolha o pacote, adicione os extras, selecione seu profissional favorito e pague na hora — sem surpresas.
-            </p>
-            <div style={{ display: 'flex', gap: 24, marginTop: 24, flexWrap: 'wrap' }}>
-              {['Preço transparente', 'Profissional à sua escolha', 'Pague online agora'].map(t => (
-                <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700 }}>
-                  <Icon name="check" size={16} /> {t}
-                </div>
-              ))}
-            </div>
+            <h2 style={{ fontSize: 24, fontWeight: 900, margin: '4px 0 0' }}>Seu pet saindo <span className="accent">impecável</span>, do jeito que ele merece.</h2>
           </div>
-          <div className="grooming-hero-visual">
-            <span className="grooming-hero-visual-label">[ foto banho & tosa Marreiro Pet ]</span>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            {['Preço transparente', 'Profissional à sua escolha', 'Pague online agora'].map(t => (
+              <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--ink-soft)' }}>
+                <Icon name="check" size={14} /> {t}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -213,23 +265,29 @@ export default function GroomingSection() {
                     <span className="gr-label">Porte</span>
                     <div className="size-grid" style={{ marginBottom: 28 }}>
                       {GROOMING_SIZES.map(s => (
-                        <button key={s.id} type="button" className={`size-card ${data.size === s.id ? 'selected' : ''}`} onClick={() => update({ size: s.id as PetSize })}>
-                          <div className="size-glyph">{s.glyph}</div>
-                          <div className="size-name">{s.name}</div>
-                          <div className="size-kg">{s.kg}</div>
+                        <button key={s.id} type="button" className={`size-card ${data.size === s.id ? 'selected' : ''}`} onClick={() => update({ size: s.id as PetSize })} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, padding: '8px 12px' }}>
+                          <span style={{ fontSize: 22 }}>{s.glyph}</span>
+                          <div style={{ textAlign: 'left' }}>
+                            <div className="size-name">{s.name}</div>
+                            <div className="size-kg">{s.kg}</div>
+                          </div>
                         </button>
                       ))}
                     </div>
                     <span className="gr-label">Pacote</span>
-                    <div className="pkg-grid">
+                    <div className="pkg-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
                       {GROOMING_PACKAGES.map(p => (
-                        <button key={p.id} type="button" className={`pkg-card ${data.package === p.id ? 'selected' : ''}`} onClick={() => update({ package: p.id })} disabled={!data.size}>
-                          <div className="pkg-radio" />
-                          <div className="pkg-body">
-                            <div className="pkg-name">{p.name}{'badge' in p && p.badge && <span className="pkg-badge">{p.badge}</span>}</div>
-                            <div className="pkg-desc">{p.desc}</div>
-                            <div className="pkg-incl">{p.includes.map((inc, i) => <span key={i} className="pkg-incl-item">{inc}</span>)}</div>
+                        <button key={p.id} type="button" className={`pkg-card ${data.package === p.id ? 'selected' : ''}`} onClick={() => update({ package: p.id })} disabled={!data.size} style={{ padding: '10px 12px', borderRadius: 10, fontSize: 13 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div className="pkg-radio" />
+                            <div className="pkg-name" style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.3, color: 'var(--ink)' }}>
+                              <span style={{ color: 'var(--brand)', display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle', marginRight: 5 }}><Icon name={p.icon} size={14} /></span>
+                              <span style={{ verticalAlign: 'middle' }}>{p.name}</span>
+                              {'badge' in p && p.badge && <span className="pkg-badge" style={{ marginLeft: 5 }}>{p.badge}</span>}
+                            </div>
                           </div>
+                          <div className="pkg-desc">{p.desc}</div>
+                          <div className="pkg-incl">{p.includes.map((inc, i) => <span key={i} className="pkg-incl-item">{inc}</span>)}</div>
                           <div className="pkg-price">
                             <div className="pkg-price-value">{data.size ? fmtBRL(p.prices[data.size as PetSize]) : 'a partir de ' + fmtBRL(p.prices.small)}</div>
                             <div className="pkg-price-label">{data.size ? GROOMING_SIZES.find(s => s.id === data.size)?.name : 'escolha o porte'}</div>
@@ -242,13 +300,13 @@ export default function GroomingSection() {
 
                 {step === 1 && (
                   <>
-                    <div className="gr-title">2. Extras opcionais</div>
+                    <div className="gr-title" id="extras-opcionais">2. Extras opcionais</div>
                     <div className="gr-sub">Turbine o atendimento. Você pode adicionar nenhum ou quantos quiser.</div>
                     <div className="addon-grid">
                       {GROOMING_ADDONS.map(a => (
                         <button key={a.id} type="button" className={`addon-card ${data.addons.includes(a.id) ? 'selected' : ''}`} onClick={() => toggleAddon(a.id)}>
                           <div className="addon-check"><Icon name="check" size={14} /></div>
-                          <div><div className="addon-name">{a.name}</div><div className="addon-sub">{a.sub}</div></div>
+                          <div><div className="addon-name">{a.name}{'badge' in a && a.badge && <span className="pkg-badge" style={{ marginLeft: 6 }}>{a.badge}</span>}</div><div className="addon-sub">{a.sub}</div></div>
                           <div className="addon-price">+ {fmtBRL(a.price)}</div>
                         </button>
                       ))}
@@ -258,27 +316,31 @@ export default function GroomingSection() {
 
                 {step === 2 && (
                   <>
-                    <div className="gr-title">3. Profissional & unidade</div>
-                    <div className="gr-sub">Quem vai cuidar do seu pet e em qual unidade.</div>
-                    <span className="gr-label">Profissional</span>
-                    <div className="pro-grid" style={{ marginBottom: 24 }}>
-                      {PROFESSIONALS.map(p => (
-                        <button key={p.id} type="button" className={`pro-card ${data.professional === p.id ? 'selected' : ''}`} onClick={() => update({ professional: p.id })}>
-                          <div className="pro-avatar">{p.id === 'any' ? <Icon name="users" size={20} /> : p.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</div>
-                          <div className="pro-meta"><div className="pro-name">{p.name}</div><div className="pro-sub">{p.sub}</div></div>
-                          <div className="pro-check"><Icon name="check" size={14} /></div>
-                        </button>
-                      ))}
-                    </div>
+                    <div className="gr-title">3. Unidade & profissional</div>
+                    <div className="gr-sub">Escolha a unidade e o profissional que vai cuidar do seu pet.</div>
                     <span className="gr-label">Unidade</span>
-                    <div className="tile-grid">
+                    <div className="tile-grid" style={{ marginBottom: 24 }}>
                       {UNITS.map(u => (
-                        <button key={u.id} type="button" className={`tile ${data.unit === u.id ? 'selected' : ''}`} onClick={() => update({ unit: u.id })}>
+                        <button key={u.id} type="button" className={`tile ${data.unit === u.id ? 'selected' : ''}`} onClick={() => update({ unit: u.id, professional: null })}>
                           <div className="tile-icon"><Icon name="pin" size={18} /></div>
                           <div><div className="tile-title">{u.name}</div><div className="tile-sub">{u.sub}</div></div>
                         </button>
                       ))}
                     </div>
+                    <span className="gr-label">Profissional</span>
+                    {data.unit ? (
+                      <div className="pro-grid">
+                        {(PROFESSIONALS[data.unit] ?? []).map(p => (
+                          <button key={p.id} type="button" className={`pro-card ${data.professional === p.id ? 'selected' : ''}`} onClick={() => update({ professional: p.id })}>
+                            <div className="pro-avatar">{p.id === 'any' ? <Icon name="users" size={20} /> : p.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</div>
+                            <div className="pro-meta"><div className="pro-name">{p.name}</div><div className="pro-sub">{p.sub}</div></div>
+                            <div className="pro-check"><Icon name="check" size={14} /></div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 8 }}>Selecione uma unidade para ver os profissionais disponíveis.</p>
+                    )}
                   </>
                 )}
 
@@ -286,21 +348,81 @@ export default function GroomingSection() {
                   <>
                     <div className="gr-title">4. Data & horário</div>
                     <div className="gr-sub">Escolha o melhor dia e horário para o seu pet.</div>
-                    <span className="gr-label">Data</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span className="gr-label" style={{ margin: 0 }}>
+                        Data
+                        {dates.length > 0 && <span style={{ fontWeight: 500, color: 'var(--muted)', marginLeft: 8, textTransform: 'none', letterSpacing: 0, fontSize: 12 }}>
+                          {dates[0].month}{dates[dates.length - 1].month !== dates[0].month ? ` — ${dates[dates.length - 1].month}` : ''}
+                        </span>}
+                      </span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button type="button" onClick={() => setDateOffset(o => Math.max(0, o - 14))} disabled={dateOffset === 0} style={{ padding: '4px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: dateOffset === 0 ? 'not-allowed' : 'pointer', opacity: dateOffset === 0 ? 0.4 : 1, fontSize: 15 }}>‹</button>
+                        <button type="button" onClick={() => setDateOffset(o => Math.min(46, o + 14))} disabled={dateOffset >= 46} style={{ padding: '4px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: dateOffset >= 46 ? 'not-allowed' : 'pointer', opacity: dateOffset >= 46 ? 0.4 : 1, fontSize: 15 }}>›</button>
+                      </div>
+                    </div>
                     <div className="date-grid" style={{ marginBottom: 24 }}>
                       {dates.map((d, i) => (
-                        <button key={i} type="button" className={`date-cell ${data.date?.day === d.day ? 'selected' : ''}`} disabled={d.disabled} onClick={() => update({ date: d })}>
-                          <div className="date-cell-day">{d.label}</div>{d.day}
+                        <button key={i} type="button" className={`date-cell ${data.date?.day === d.day && data.date?.month === d.month ? 'selected' : ''}`} disabled={d.disabled} onClick={() => update({ date: d })}>
+                          <div className="date-cell-day">{d.label}</div>
+                          {d.day}
+                          <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{d.month}</div>
                         </button>
                       ))}
                     </div>
-                    <span className="gr-label">Horário disponível</span>
-                    <div className="time-grid">
-                      {GROOMING_TIMES.map(t => {
-                        const disabled = !data.date || (t === '13:00' && (data.date?.day ?? 0) % 3 === 0)
-                        return <button key={t} type="button" className={`time-slot ${data.time === t ? 'selected' : ''}`} disabled={disabled} onClick={() => update({ time: t })}>{t}</button>
-                      })}
-                    </div>
+                    <span className="gr-label">
+                      Horário disponível
+                      {totalDurationMin > 0 && <span style={{ fontWeight: 500, color: 'var(--muted)', marginLeft: 8, textTransform: 'none', letterSpacing: 0 }}>· duração estimada: {totalDurationMin} min</span>}
+                    </span>
+                    {data.date && availableSlots === null && (
+                      <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10 }}>Nenhum horário cadastrado para este dia. Todos os horários estão disponíveis.</p>
+                    )}
+                    {!data.vip && (
+                      <div className="time-grid">
+                        {GROOMING_TIMES.map((t, idx) => {
+                          const hasConsecutive = (() => {
+                            const slots = availableSlots ?? GROOMING_TIMES
+                            for (let i = 0; i < slotsNeeded; i++) {
+                              if (!slots.includes(GROOMING_TIMES[idx + i] ?? '')) return false
+                            }
+                            return true
+                          })()
+                          const disabled = !data.date || !hasConsecutive
+                          return <button key={t} type="button" className={`time-slot ${data.time === t ? 'selected' : ''}`} disabled={disabled} onClick={() => update({ time: t })}>{t}</button>
+                        })}
+                      </div>
+                    )}
+
+                    {data.vip && (
+                      <div className="time-grid">
+                        {GROOMING_TIMES.map(t => (
+                          <button key={t} type="button" className={`time-slot ${data.time === t ? 'selected' : ''}`} disabled={!data.date} onClick={() => update({ time: t })}>{t}</button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Encaixe VIP */}
+                    {data.date && (
+                      <button
+                        type="button"
+                        onClick={() => update({ vip: !data.vip, time: null })}
+                        style={{
+                          marginTop: 16, width: '100%', padding: '14px 16px', borderRadius: 12,
+                          border: `2px solid ${data.vip ? '#EF7720' : '#e5e7eb'}`,
+                          background: data.vip ? '#FEF1E4' : '#fff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          cursor: 'pointer', transition: 'all .15s',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left' }}>
+                          <span style={{ fontSize: 22 }}>⭐</span>
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: 14, color: '#EF7720' }}>Encaixe VIP</div>
+                            <div style={{ fontSize: 12, color: '#888' }}>Sem horário disponível? Garantimos seu atendimento com prioridade.</div>
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: 900, fontSize: 14, color: '#EF7720', whiteSpace: 'nowrap', marginLeft: 10 }}>+ R$ {VIP_PRICE},00</div>
+                      </button>
+                    )}
                   </>
                 )}
 
@@ -329,6 +451,10 @@ export default function GroomingSection() {
                       </div>
                     </div>
                     <div className="form-row">
+                      <div className="label" style={{ marginBottom: 6 }}>CPF *</div>
+                      <input className="input" placeholder="000.000.000-00" value={data.cpf} onChange={e => update({ cpf: e.target.value })} />
+                    </div>
+                    <div className="form-row">
                       <div className="label" style={{ marginBottom: 6 }}>Observações (alergias, comportamento, preferências)</div>
                       <textarea className="textarea" value={data.notes} onChange={e => update({ notes: e.target.value })} />
                     </div>
@@ -352,7 +478,7 @@ export default function GroomingSection() {
             )}
           </div>
 
-          <Recap data={data} total={total} />
+          <Recap data={data} total={total} totalDurationMin={totalDurationMin} />
         </div>
       </div>
     </section>

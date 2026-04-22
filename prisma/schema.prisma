@@ -38,6 +38,7 @@ model Appointment {
   status          AppointmentStatus @default(AWAITING_PAYMENT)
 
   notes           String?
+  isVip           Boolean           @default(false)
 
   @@index([unitId])
   @@index([status])
@@ -57,4 +58,31 @@ enum PaymentStatus {
   APPROVED
   REJECTED
   REFUNDED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  username  String   @unique
+  password  String
+  role      UserRole @default(RECEPTIONIST)
+  unitId    String?
+  createdAt DateTime @default(now())
+}
+
+enum UserRole {
+  ADMIN
+  RECEPTIONIST
+}
+
+model Availability {
+  id           String   @id @default(cuid())
+  professional String
+  unitId       String
+  date         DateTime @db.Date
+  slots        String[]
+
+  @@unique([professional, date])
+  @@index([unitId])
+  @@index([date])
 }

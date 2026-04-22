@@ -29,7 +29,7 @@ export default function Hero() {
           </div>
           <div className="hero-meta">
             <div className="hero-meta-item">
-              <div className="num">15+</div>
+              <div className="num">8+</div>
               <div className="lbl">anos de experiência</div>
             </div>
             <div className="hero-meta-item">
@@ -43,31 +43,35 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="hero-visual">
-          <div className="hero-photo">
-            <div className="hero-photo-inner">
-              <Image src="/marreiro-logo.png" alt="" width={400} height={400} className="hero-logo-big" style={{ filter: 'brightness(1.5) contrast(0.9)' }} />
-            </div>
+        <div className="hero-visual" style={{ maxWidth: 540, height: 580 }}>
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            <Image
+              src="/hero.png"
+              alt="Marreiro Pet"
+              fill
+              style={{ objectFit: 'cover', objectPosition: 'center top' }}
+              priority
+            />
           </div>
-          <div className="hero-card" style={{ top: 30, left: -30 }}>
-            <div className="hero-card-icon" style={{ background: 'var(--orange-soft)', color: 'var(--orange)' }}><Icon name="heart" size={22} /></div>
+          <div className="hero-card" style={{ top: 430, left: -120 }}>
+            <div className="hero-card-icon" style={{ background: 'var(--blue-soft)', color: 'var(--blue)' }}><Icon name="truck" size={22} /></div>
             <div>
-              <div className="hero-card-title">Atendimento 24h</div>
-              <div className="hero-card-sub">Emergências veterinárias</div>
+              <div className="hero-card-title">Delivery grátis</div>
+              <div className="hero-card-sub">Em pedidos acima de R$ 50</div>
             </div>
           </div>
-          <div className="hero-card" style={{ bottom: 80, right: -30 }}>
+          <div className="hero-card" style={{ top: 24, right: -24 }}>
             <div className="hero-card-icon" style={{ background: '#DFF7EA', color: '#0E9F6E' }}><Icon name="check" size={22} /></div>
             <div>
               <div className="hero-card-title">12.340 pets felizes</div>
               <div className="hero-card-sub">Avaliação 4.9 ★</div>
             </div>
           </div>
-          <div className="hero-card" style={{ bottom: -20, left: 20 }}>
-            <div className="hero-card-icon" style={{ background: 'var(--blue-soft)', color: 'var(--blue)' }}><Icon name="truck" size={22} /></div>
+          <div className="hero-card" style={{ bottom: -24, left: '50%', transform: 'translateX(-50%)' }}>
+            <div className="hero-card-icon" style={{ background: 'var(--orange-soft)', color: 'var(--orange)' }}><Icon name="heart" size={22} /></div>
             <div>
-              <div className="hero-card-title">Delivery grátis</div>
-              <div className="hero-card-sub">Em ração acima de R$ 150</div>
+              <div className="hero-card-title">Atendimento 24h</div>
+              <div className="hero-card-sub">Emergências veterinárias</div>
             </div>
           </div>
         </div>

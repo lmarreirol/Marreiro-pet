@@ -1,0 +1,654 @@
+'use client'
+import { useEffect, useState } from 'react'
+import { useSession, signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import Image from 'next/image'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+
+const UNITS = [
+  { id: 'caucaia', name: 'Caucaia' },
+  { id: 'pecem', name: 'Pecém' },
+  { id: 'saogoncalo', name: 'São Gonçalo' },
+  { id: 'taiba', name: 'Taíba' },
+]
+
+const STATUS_LABELS: Record<string, string> = {
+  AWAITING_PAYMENT: 'Aguard. pagamento',
+  CONFIRMED: 'Confirmado',
+  CANCELLED: 'Cancelado',
+  COMPLETED: 'Concluído',
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  AWAITING_PAYMENT: '#f59e0b',
+  CONFIRMED: '#16a34a',
+  CANCELLED: '#dc2626',
+  COMPLETED: '#6366f1',
+}
+
+const PACKAGES: Record<string, string> = {
+  'banho': 'Banho Tradicional',
+  'banho-tosa': 'Banho + Tosa Higiênica',
+  'spa': 'Tosa Completa + Banho',
+}
+
+const ADDONS: Record<string, string> = {
+  'hidra': 'Hidratação de pelos',
+  'ozonio': 'Banho Luxo',
+  'dentes': 'Escovação de dentes',
+  'unhas': 'Remoção de Subpelo',
+  'perfume': 'Tonalização de Pelo',
+  'coloracao': 'Retirada de Nós',
+}
+
+type Appointment = {
+  id: string
+  serviceType: string | null
+  petName: string
+  tutorName: string
+  phone: string
+  package: string | null
+  addons: string[]
+  petSize: string | null
+  unitId: string
+  professional: string | null
+  appointmentDate: string
+  appointmentTime: string
+  status: string
+  totalPrice: string
+  notes: string | null
+  isVip: boolean
+}
+
+function todayISO() { return new Date().toISOString().split('T')[0] }
+
+export default function Dashboard() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [date, setDate] = useState(todayISO())
+  const [unitFilter, setUnitFilter] = useState<string>('all')
+  const [proFilter, setProFilter] = useState<string>('all')
+  const [tab, setTab] = useState<'appointments' | 'clinic' | 'availability' | 'report'>('appointments')
+
+  const user = session?.user as any
+  const isAdmin = user?.role === 'ADMIN'
+
+  useEffect(() => {
+    if (status === 'unauthenticated') router.push('/admin/login')
+  }, [status])
+
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    setLoading(true)
+    const params = new URLSearchParams({ date, role: user?.role ?? '', userUnitId: user?.unitId ?? '', serviceTypes: 'grooming' })
+    if (isAdmin && unitFilter !== 'all') params.set('unitId', unitFilter)
+    if (proFilter !== 'all') params.set('professional', proFilter)
+    fetch(`/api/admin/appointments?${params}`)
+      .then(r => r.json())
+      .then(d => { setAppointments(d.appointments ?? []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [date, unitFilter, proFilter, status])
+
+  const updateStatus = async (id: string, newStatus: string) => {
+    await fetch(`/api/admin/appointments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a))
+  }
+
+  if (status === 'loading') return <div style={{ padding: 40, textAlign: 'center' }}>Carregando...</div>
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#f0f4f8' }}>
+      {/* Header */}
+      <div style={{ background: '#004A99', color: '#fff', padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Image src="/marreiro-logo-10.png" alt="Marreiro Pet" width={52} height={20} style={{ objectFit: 'contain' }} />
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 18 }}>Marreiro Pet</div>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>{user?.name} · {isAdmin ? 'Administrador' : UNITS.find(u => u.id === user?.unitId)?.name}</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={() => signOut({ callbackUrl: '/admin/login' })} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none' }}>
+            Sair
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 28px', display: 'flex', gap: 4 }}>
+        {(['appointments', 'clinic', 'availability', 'report'] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)} style={{ padding: '14px 18px', fontSize: 14, fontWeight: tab === t ? 800 : 500, color: tab === t ? '#004A99' : '#666', background: 'none', border: 'none', borderBottom: tab === t ? '2px solid #004A99' : '2px solid transparent', cursor: 'pointer' }}>
+            {t === 'appointments' ? 'Agendamentos' : t === 'clinic' ? 'Agenda Clínica' : t === 'availability' ? 'Disponibilidade' : 'Relatório de Agenda'}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 16px' }}>
+        {tab === 'appointments' && (
+          <>
+            {/* Filters */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={() => setDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() - 1); return dt.toISOString().split('T')[0] })} style={{ padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>‹</button>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
+                <button onClick={() => setDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() + 1); return dt.toISOString().split('T')[0] })} style={{ padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>›</button>
+              </div>
+              {isAdmin && (
+                <select value={unitFilter} onChange={e => { setUnitFilter(e.target.value); setProFilter('all') }} style={inputStyle}>
+                  <option value="all">Todas as unidades</option>
+                  {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              )}
+              <select value={proFilter} onChange={e => setProFilter(e.target.value)} style={inputStyle}>
+                <option value="all">Todos os profissionais</option>
+                {(PROFESSIONALS[isAdmin ? (unitFilter !== 'all' ? unitFilter : '') : user?.unitId] ?? Object.values(PROFESSIONALS).flat())
+                  .filter((p, i, arr) => arr.findIndex(x => x.id === p.id) === i && p.id !== 'any')
+                  .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+
+            {/* Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+              {Object.entries(STATUS_LABELS).map(([s, label]) => (
+                <div key={s} style={{ background: '#fff', borderRadius: 12, padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: STATUS_COLORS[s] }}>{appointments.filter(a => a.status === s).length}</div>
+                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Appointments list */}
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>Carregando agendamentos...</div>
+            ) : appointments.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 40, color: '#888', background: '#fff', borderRadius: 16 }}>Nenhum agendamento para este dia.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {appointments.map(a => (
+                  <div key={a.id} style={{ background: '#fff', borderRadius: 14, padding: '18px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: `4px solid ${STATUS_COLORS[a.status]}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        {/* Hora + Status */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                          <span style={{ fontSize: 20, fontWeight: 900, color: '#004A99' }}>{a.appointmentTime}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: STATUS_COLORS[a.status] + '20', color: STATUS_COLORS[a.status] }}>{STATUS_LABELS[a.status]}</span>
+                          {a.isVip && <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: '#fef9c3', color: '#854d0e' }}>⭐ Encaixe VIP</span>}
+                        </div>
+                        {/* Nome do pet + tutor */}
+                        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>
+                          {a.petName} <span style={{ fontSize: 13, fontWeight: 500, color: '#888' }}>· {a.tutorName}</span>
+                        </div>
+                        {/* Serviço */}
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#333', marginBottom: 2 }}>
+                          {PACKAGES[a.package ?? ''] ?? a.package ?? 'Consulta'}
+                          {a.petSize && <span style={{ fontWeight: 500, color: '#888' }}> · {a.petSize === 'small' ? 'Pequeno' : a.petSize === 'medium' ? 'Médio' : 'Grande'}</span>}
+                        </div>
+                        {/* Extras */}
+                        {a.addons?.length > 0 && (
+                          <div style={{ fontSize: 12, color: '#EF7720', fontWeight: 600, marginBottom: 2 }}>
+                            + {a.addons.map(id => ADDONS[id] ?? id).join(', ')}
+                          </div>
+                        )}
+                        {/* Profissional */}
+                        {a.professional && <div style={{ fontSize: 12, color: '#888' }}>Profissional: {a.professional}</div>}
+                        {/* Observações */}
+                        {a.notes && <div style={{ fontSize: 12, color: '#888', marginTop: 4, fontStyle: 'italic' }}>"{a.notes}"</div>}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: '#004A99' }}>R$ {Number(a.totalPrice).toFixed(2).replace('.', ',')}</div>
+                        <a href={`https://wa.me/55${a.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#25D366', fontWeight: 700, textDecoration: 'none', background: '#f0fdf4', padding: '6px 10px', borderRadius: 8 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+                          {a.phone}
+                        </a>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+                      {['CONFIRMED', 'COMPLETED', 'CANCELLED'].map(s => (
+                        <button key={s} onClick={() => updateStatus(a.id, s)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${STATUS_COLORS[s]}`, background: a.status === s ? STATUS_COLORS[s] : '#fff', color: a.status === s ? '#fff' : STATUS_COLORS[s] }}>
+                          {STATUS_LABELS[s]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {tab === 'clinic' && (
+          <ClinicTab isAdmin={isAdmin} userUnitId={user?.unitId} />
+        )}
+
+        {tab === 'availability' && (
+          <AvailabilityTab unitId={isAdmin ? undefined : user?.unitId} isAdmin={isAdmin} />
+        )}
+
+        {tab === 'report' && (
+          <ReportTab isAdmin={isAdmin} userUnitId={user?.unitId} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+const CLINIC_SERVICE_LABELS: Record<string, string> = {
+  vet: 'Consulta Veterinária',
+  vacina: 'Vacinação',
+  exames: 'Exames',
+}
+
+function ClinicTab({ isAdmin, userUnitId }: { isAdmin: boolean; userUnitId?: string }) {
+  const [date, setDate] = useState(todayISO())
+  const [unitFilter, setUnitFilter] = useState(isAdmin ? 'all' : (userUnitId ?? 'all'))
+  const [serviceFilter, setServiceFilter] = useState('all')
+  const [rows, setRows] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const updateStatus = async (id: string, newStatus: string) => {
+    await fetch(`/api/admin/appointments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+    setRows(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a))
+  }
+
+  useEffect(() => {
+    setLoading(true)
+    const params = new URLSearchParams({ date, role: isAdmin ? 'ADMIN' : 'RECEPTIONIST', userUnitId: userUnitId ?? '', serviceTypes: 'vet,vacina,exames' })
+    if (isAdmin && unitFilter !== 'all') params.set('unitId', unitFilter)
+    if (!isAdmin && userUnitId) params.set('unitId', userUnitId)
+    if (serviceFilter !== 'all') params.set('serviceTypes', serviceFilter)
+    fetch(`/api/admin/appointments?${params}`)
+      .then(r => r.json())
+      .then(d => { setRows(d.appointments ?? []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [date, unitFilter, serviceFilter])
+
+  return (
+    <div>
+      {/* Filtros */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button onClick={() => setDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() - 1); return dt.toISOString().split('T')[0] })} style={{ padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>‹</button>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
+          <button onClick={() => setDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() + 1); return dt.toISOString().split('T')[0] })} style={{ padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>›</button>
+        </div>
+        {isAdmin && (
+          <select value={unitFilter} onChange={e => setUnitFilter(e.target.value)} style={inputStyle}>
+            <option value="all">Todas as unidades</option>
+            {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+        )}
+        <select value={serviceFilter} onChange={e => setServiceFilter(e.target.value)} style={inputStyle}>
+          <option value="all">Todos os serviços</option>
+          {Object.entries(CLINIC_SERVICE_LABELS).map(([id, label]) => (
+            <option key={id} value={id}>{label}</option>
+          ))}
+        </select>
+        <span style={{ fontSize: 13, color: '#888', fontWeight: 600, alignSelf: 'center' }}>{rows.length} agendamento{rows.length !== 1 ? 's' : ''}</span>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+        {Object.entries(STATUS_LABELS).map(([s, label]) => (
+          <div key={s} style={{ background: '#fff', borderRadius: 12, padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 24, fontWeight: 900, color: STATUS_COLORS[s] }}>{rows.filter(a => a.status === s).length}</div>
+            <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>Carregando...</div>
+      ) : rows.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: '#888', background: '#fff', borderRadius: 16 }}>Nenhum agendamento clínico para este dia.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {rows.map(a => (
+            <div key={a.id} style={{ background: '#fff', borderRadius: 14, padding: '18px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: `4px solid ${STATUS_COLORS[a.status]}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <span style={{ fontSize: 20, fontWeight: 900, color: '#004A99' }}>{a.appointmentTime}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: STATUS_COLORS[a.status] + '20', color: STATUS_COLORS[a.status] }}>{STATUS_LABELS[a.status]}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: '#e8f0fa', color: '#004A99' }}>{CLINIC_SERVICE_LABELS[a.serviceType ?? ''] ?? a.serviceType}</span>
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>
+                    {a.petName} <span style={{ fontSize: 13, fontWeight: 500, color: '#888' }}>· {a.tutorName}</span>
+                  </div>
+                  {a.unitId && <div style={{ fontSize: 12, color: '#888' }}>Unidade: {UNITS.find(u => u.id === a.unitId)?.name ?? a.unitId}</div>}
+                  {a.notes && <div style={{ fontSize: 12, color: '#888', marginTop: 4, fontStyle: 'italic' }}>"{a.notes}"</div>}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                  <a href={`https://wa.me/55${a.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#25D366', fontWeight: 700, textDecoration: 'none', background: '#f0fdf4', padding: '6px 10px', borderRadius: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+                    {a.phone}
+                  </a>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+                {['CONFIRMED', 'COMPLETED', 'CANCELLED'].map(s => (
+                  <button key={s} onClick={() => updateStatus(a.id, s)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${STATUS_COLORS[s]}`, background: a.status === s ? STATUS_COLORS[s] : '#fff', color: a.status === s ? '#fff' : STATUS_COLORS[s] }}>
+                    {STATUS_LABELS[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const PROFESSIONALS: Record<string, { id: string; name: string }[]> = {
+  caucaia: [{ id: 'victor', name: 'Victor Lopes' }, { id: 'daniele', name: 'Daniele Santos' }, { id: 'eduarda', name: 'Eduarda' }, { id: 'israel', name: 'Israel' }],
+  pecem: [{ id: 'vitoria', name: 'Vitória Duraes' }, { id: 'christian', name: 'Christian Fernandes' }],
+  taiba: [{ id: 'andresa', name: 'Andresa Martins' }, { id: 'erica', name: 'Erica Melo' }],
+  saogoncalo: [{ id: 'anderson', name: 'Anderson Correia' }, { id: 'carla', name: 'Carla Janaina' }],
+}
+const ALL_SLOTS = ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30']
+
+function AvailabilityTab({ unitId, isAdmin }: { unitId?: string; isAdmin: boolean }) {
+  const [selectedUnit, setSelectedUnit] = useState(unitId ?? 'caucaia')
+  const [professional, setProfessional] = useState(PROFESSIONALS[unitId ?? 'caucaia']?.[0]?.id ?? '')
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [slots, setSlots] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  const professionals = PROFESSIONALS[selectedUnit] ?? []
+
+  useEffect(() => { setProfessional(professionals[0]?.id ?? ''); setSlots([]) }, [selectedUnit])
+  useEffect(() => {
+    if (!professional || !date) return
+    fetch(`/api/availability?professional=${professional}&date=${date}`).then(r => r.json()).then(d => setSlots(d.slots ?? []))
+  }, [professional, date])
+
+  const save = async () => {
+    setSaving(true)
+    await fetch('/api/availability', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': 'marreiro@admin2024' }, body: JSON.stringify({ professional, unitId: selectedUnit, date, slots }) })
+    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div style={{ maxWidth: 560 }}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr 1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
+          {isAdmin && (
+            <div>
+              <label style={labelStyle}>Unidade</label>
+              <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)} style={inputStyle}>
+                {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+          )}
+          <div>
+            <label style={labelStyle}>Profissional</label>
+            <select value={professional} onChange={e => setProfessional(e.target.value)} style={inputStyle}>
+              {professionals.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Data</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button onClick={() => setDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() - 1); return dt.toISOString().split('T')[0] })} style={{ padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>‹</button>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+              <button onClick={() => setDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() + 1); return dt.toISOString().split('T')[0] })} style={{ padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>›</button>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 16, height: 16, borderRadius: 4, background: '#e8f0fa', border: '2px solid #004A99' }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#555' }}>Disponível</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 16, height: 16, borderRadius: 4, background: '#fff', border: '2px solid #e5e7eb' }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#555' }}>Não disponível</span>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          {ALL_SLOTS.map(s => (
+            <button key={s} onClick={() => setSlots(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+              style={{ padding: '11px', borderRadius: 10, border: `2px solid ${slots.includes(s) ? '#004A99' : '#e5e7eb'}`, background: slots.includes(s) ? '#e8f0fa' : '#fff', color: slots.includes(s) ? '#004A99' : '#333', fontWeight: slots.includes(s) ? 800 : 500, fontSize: 14, cursor: 'pointer' }}>
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+      <button onClick={save} disabled={saving} style={{ width: '100%', padding: '13px', borderRadius: 12, background: saved ? '#16a34a' : '#EF7720', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer', border: 'none' }}>
+        {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar disponibilidade'}
+      </button>
+    </div>
+  )
+}
+
+const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, background: '#fff', boxSizing: 'border-box' }
+const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#666', display: 'block', marginBottom: 6 }
+
+function printReport(profName: string, items: Appointment[], dateLabel: string) {
+  const rows = items.map(a => `
+    <tr>
+      <td>${new Date(a.appointmentDate).toLocaleDateString('pt-BR')}</td>
+      <td>${a.appointmentTime}</td>
+      <td>${a.tutorName}<br/><small style="color:#888">${a.petName}</small></td>
+      <td>${PACKAGES[a.package ?? ''] ?? a.package ?? '—'}${a.addons?.length > 0 ? `<br/><small style="color:#EF7720">${a.addons.map((id: string) => ADDONS[id] ?? id).join(', ')}</small>` : ''}</td>
+    </tr>
+  `).join('')
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
+  <title>Agenda — ${profName}</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 32px; color: #111; }
+    h1 { font-size: 20px; margin-bottom: 4px; color: #004A99; }
+    .sub { font-size: 13px; color: #888; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #004A99; color: #fff; padding: 10px 14px; text-align: left; font-size: 13px; }
+    td { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    small { font-size: 11px; }
+    .footer { margin-top: 24px; font-size: 12px; color: #aaa; text-align: center; }
+    @media print { body { padding: 16px; } }
+  </style></head><body>
+  <h1>Agenda — ${profName}</h1>
+  <div class="sub">${dateLabel} · ${items.length} agendamento${items.length !== 1 ? 's' : ''} · Marreiro Pet</div>
+  <table>
+    <thead><tr><th>Data</th><th>Horário</th><th>Cliente</th><th>Serviço</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
+  <script>window.onload = () => window.print()</script>
+  </body></html>`
+
+  const w = window.open('', '_blank')
+  if (w) { w.document.write(html); w.document.close() }
+}
+
+function ReportTab({ isAdmin, userUnitId }: { isAdmin: boolean; userUnitId?: string }) {
+  const [reportDate, setReportDate] = useState(todayISO())
+  const [allDates, setAllDates] = useState(false)
+  const [unitFilter, setUnitFilter] = useState(isAdmin ? 'all' : (userUnitId ?? 'all'))
+  const [proFilter, setProFilter] = useState('all')
+  const [rows, setRows] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setLoading(true)
+    const params = new URLSearchParams({ role: isAdmin ? 'ADMIN' : 'RECEPTIONIST', userUnitId: userUnitId ?? '' })
+    if (!allDates) params.set('date', reportDate)
+    if (isAdmin && unitFilter !== 'all') params.set('unitId', unitFilter)
+    if (!isAdmin && userUnitId) params.set('unitId', userUnitId)
+    if (proFilter !== 'all') params.set('professional', proFilter)
+    fetch(`/api/admin/appointments?${params}`)
+      .then(r => r.json())
+      .then(d => { setRows(d.appointments ?? []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [reportDate, allDates, unitFilter, proFilter])
+
+  const professionals = isAdmin
+    ? (unitFilter !== 'all' ? PROFESSIONALS[unitFilter] ?? [] : Object.values(PROFESSIONALS).flat().filter((p, i, a) => a.findIndex(x => x.id === p.id) === i))
+    : (PROFESSIONALS[userUnitId ?? ''] ?? [])
+
+  const filteredProfessionals = proFilter !== 'all' ? professionals.filter(p => p.id === proFilter) : professionals
+
+  const grouped = filteredProfessionals.reduce((acc, p) => {
+    acc[p.id] = { name: p.name, items: rows.filter(r => r.professional === p.id) }
+    return acc
+  }, {} as Record<string, { name: string; items: Appointment[] }>)
+
+  const semPro = rows.filter(r => !r.professional || !professionals.find(p => p.id === r.professional))
+
+  const chartData = professionals
+    .filter(p => p.id !== 'any')
+    .map(p => ({ name: p.name.split(' ')[0], total: rows.filter(r => r.professional === p.id).length }))
+    .sort((a, b) => b.total - a.total)
+
+  const COLORS = ['#004A99', '#EF7720', '#16a34a', '#6366f1', '#dc2626', '#0891b2', '#854d0e', '#4f46e5']
+
+  return (
+    <div style={{ maxWidth: 900 }}>
+      {/* Gráfico */}
+      {chartData.length > 0 && (
+        <div style={{ background: '#fff', borderRadius: 14, padding: '20px 20px 10px', marginBottom: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 16, color: '#0F1B2D' }}>Agendamentos por profissional</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={chartData} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 700 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(v) => [`${v} agendamento${v !== 1 ? 's' : ''}`, '']} labelStyle={{ fontWeight: 700 }} />
+              <Bar dataKey="total" radius={[6, 6, 0, 0]}>
+                {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+      {/* Filtros */}
+      <div style={{ background: '#fff', borderRadius: 14, padding: '16px 20px', marginBottom: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div>
+          <label style={labelStyle}>Data</label>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <button onClick={() => { setAllDates(false); setReportDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() - 1); return dt.toISOString().split('T')[0] }) }} style={{ padding: '8px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>‹</button>
+            <input type="date" value={reportDate} onChange={e => { setReportDate(e.target.value); setAllDates(false) }} style={{ ...inputStyle, width: 160 }} disabled={allDates} />
+            <button onClick={() => { setAllDates(false); setReportDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() + 1); return dt.toISOString().split('T')[0] }) }} style={{ padding: '8px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>›</button>
+            <button onClick={() => setAllDates(v => !v)} style={{ padding: '8px 14px', borderRadius: 8, border: `1.5px solid ${allDates ? '#004A99' : '#e5e7eb'}`, background: allDates ? '#e8f0fa' : '#fff', color: allDates ? '#004A99' : '#333', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Todos</button>
+          </div>
+        </div>
+        {isAdmin && (
+          <div>
+            <label style={labelStyle}>Unidade</label>
+            <select value={unitFilter} onChange={e => { setUnitFilter(e.target.value); setProFilter('all') }} style={{ ...inputStyle, width: 160 }}>
+              <option value="all">Todas</option>
+              {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </div>
+        )}
+        <div>
+          <label style={labelStyle}>Profissional</label>
+          <select value={proFilter} onChange={e => setProFilter(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+            <option value="all">Todos</option>
+            {professionals.filter(p => p.id !== 'any').map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </div>
+        <div style={{ marginLeft: 'auto', alignSelf: 'center' }}>
+          <span style={{ fontSize: 13, color: '#888', fontWeight: 600 }}>{rows.length} agendamento{rows.length !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>Carregando...</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {Object.entries(grouped).map(([id, { name, items }]) => (
+            <div key={id} style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <div style={{ background: '#004A99', color: '#fff', padding: '10px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 800, fontSize: 15 }}>{name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 12, opacity: 0.8 }}>{items.length} agendamento{items.length !== 1 ? 's' : ''}</span>
+                  {items.length > 0 && (
+                    <button onClick={() => printReport(name, items, allDates ? 'Todos os dias' : new Date(reportDate + 'T12:00:00').toLocaleDateString('pt-BR'))}
+                      style={{ padding: '4px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12, fontWeight: 700, border: '1px solid rgba(255,255,255,0.4)', cursor: 'pointer' }}>
+                      🖨️ Imprimir / PDF
+                    </button>
+                  )}
+                </div>
+              </div>
+              {items.length === 0 ? (
+                <div style={{ padding: '14px 18px', color: '#aaa', fontSize: 13 }}>Nenhum agendamento</div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>
+                      {['Data', 'Horário', 'Cliente', 'Serviço', 'Extras'].map(h => (
+                        <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 700, color: '#555', fontSize: 12 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((a, i) => (
+                      <tr key={a.id} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                        <td style={{ padding: '10px 14px', color: '#555', whiteSpace: 'nowrap', fontSize: 13 }}>
+                          {new Date(a.appointmentDate).toLocaleDateString('pt-BR')}
+                        </td>
+                        <td style={{ padding: '10px 14px', fontWeight: 800, color: '#004A99', whiteSpace: 'nowrap' }}>
+                          {a.appointmentTime}
+                        </td>
+                        <td style={{ padding: '10px 14px' }}>
+                          <div style={{ fontWeight: 700 }}>{a.tutorName}</div>
+                          <div style={{ fontSize: 11, color: '#888' }}>{a.petName}</div>
+                        </td>
+                        <td style={{ padding: '10px 14px' }}>
+                          {PACKAGES[a.package ?? ''] ?? a.package ?? '—'}
+                        </td>
+                        <td style={{ padding: '10px 14px', fontSize: 12, color: '#EF7720', fontWeight: 600 }}>
+                          {a.addons?.length > 0 ? a.addons.map((id: string) => ADDONS[id] ?? id).join(', ') : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          ))}
+          {semPro.length > 0 && (
+            <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <div style={{ background: '#6b7280', color: '#fff', padding: '10px 18px', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 800, fontSize: 15 }}>Sem profissional</span>
+                <span style={{ fontSize: 12, opacity: 0.8 }}>{semPro.length} agendamento{semPro.length !== 1 ? 's' : ''}</span>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <tbody>
+                  {semPro.map((a, i) => (
+                    <tr key={a.id} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                      <td style={{ padding: '10px 14px', fontWeight: 800, color: '#004A99' }}>{a.appointmentTime}</td>
+                      <td style={{ padding: '10px 14px', fontWeight: 700 }}>{a.petName}</td>
+                      <td style={{ padding: '10px 14px', color: '#555' }}>{a.tutorName}</td>
+                      <td style={{ padding: '10px 14px' }}>{PACKAGES[a.package ?? ''] ?? '—'}</td>
+                      <td style={{ padding: '10px 14px', fontWeight: 700 }}>R$ {Number(a.totalPrice).toFixed(2).replace('.', ',')}</td>
+                      <td style={{ padding: '10px 14px' }}><span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: STATUS_COLORS[a.status] + '20', color: STATUS_COLORS[a.status] }}>{STATUS_LABELS[a.status]}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {rows.length === 0 && !loading && (
+            <div style={{ textAlign: 'center', padding: 40, color: '#888', background: '#fff', borderRadius: 16 }}>Nenhum agendamento encontrado.</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
