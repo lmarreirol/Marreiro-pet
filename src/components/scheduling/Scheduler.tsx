@@ -9,6 +9,22 @@ const SERVICES = [
   { id: 'exames', name: 'Exames', sub: 'Laboratório e imagem', icon: 'pill' as const },
 ]
 
+const VACCINES: Record<string, { id: string; name: string; price: number; priceLabel: string }[]> = {
+  dog: [
+    { id: 'v8v10-importada', name: 'Múltipla V8/V10 Importada', price: 90, priceLabel: 'R$ 90,00' },
+    { id: 'vanguard-v10',    name: 'Viral V10 Vanguard Plus',   price: 95, priceLabel: 'R$ 95,00' },
+    { id: 'antirabica-cao',  name: 'Antirábica (raiva)',         price: 60, priceLabel: 'R$ 60,00' },
+    { id: 'tosse-canis',     name: 'Vacina Tosse dos Canis',     price: 0,  priceLabel: 'A consultar' },
+    { id: 'anti-giardia',    name: 'Anti-Giárdia',               price: 90, priceLabel: 'R$ 90,00' },
+  ],
+  cat: [
+    { id: 'antirabica-gato', name: 'Antirábica (raiva)',  price: 60,  priceLabel: 'R$ 60,00' },
+    { id: 'felina-v3',       name: 'Múltipla Felina V3',  price: 70,  priceLabel: 'R$ 70,00' },
+    { id: 'felina-v4',       name: 'Múltipla Felina V4',  price: 80,  priceLabel: 'R$ 80,00' },
+    { id: 'felina-v5',       name: 'Múltipla Felina V5',  price: 120, priceLabel: 'R$ 120,00' },
+  ],
+}
+
 const VET_SUB_SERVICES = [
   { id: 'clinico-geral', name: 'Consulta Clínico Geral', price: 80, priceLabel: 'R$ 80,00', info: '' },
   { id: 'plantao', name: 'Consulta Plantão', price: 120, priceLabel: 'R$ 120,00', info: '19h–07h · Domingos e feriados' },
@@ -54,6 +70,7 @@ type DateEntry = ReturnType<typeof getNextDates>[0]
 interface BookingState {
   service: string | null
   vetSubService: string | null
+  vaccine: string | null
   unit: string | null
   petType: string | null
   size: string | null
@@ -68,7 +85,7 @@ interface BookingState {
 }
 
 const initialState: BookingState = {
-  service: null, vetSubService: null, unit: null, petType: null, size: null, professional: null,
+  service: null, vetSubService: null, vaccine: null, unit: null, petType: null, size: null, professional: null,
   date: null, time: null, tutorName: '', phone: '', cpf: '', petName: '', notes: '',
 }
 
@@ -134,7 +151,12 @@ export default function Scheduler() {
       if (data.service === 'vet') return !!(data.service && data.vetSubService && data.unit)
       return !!(data.service && data.unit)
     }
-    if (step === 1) return !!(data.petType && (data.service !== 'banho' || data.professional))
+    if (step === 1) {
+      if (!data.petType) return false
+      if (data.service === 'banho') return !!data.professional
+      if (data.service === 'vacina') return !!data.vaccine
+      return true
+    }
     if (step === 2) return data.date && data.time
     if (step === 3) return data.tutorName && data.phone && data.cpf && data.petName && validateCpf(data.cpf)
     return false
@@ -153,7 +175,7 @@ export default function Scheduler() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serviceType: data.service,
-          package: data.vetSubService ?? null,
+          package: data.vetSubService ?? data.vaccine ?? null,
           unitId: data.unit,
           professional: data.professional ?? null,
           petName: data.petName,
@@ -164,7 +186,10 @@ export default function Scheduler() {
           notes: data.notes || null,
           date: data.date?.date.toISOString(),
           time: data.time,
-          totalPrice: VET_SUB_SERVICES.find(s => s.id === data.vetSubService)?.price ?? 0,
+          totalPrice:
+            VET_SUB_SERVICES.find(s => s.id === data.vetSubService)?.price ??
+            (VACCINES[data.petType ?? ''] ?? []).find(v => v.id === data.vaccine)?.price ??
+            0,
           isVip: false,
         }),
       })
@@ -280,10 +305,10 @@ export default function Scheduler() {
           <div className="form-title">{data.service === 'banho' ? 'Porte do pet & pacote' : 'Quem é o pet?'}</div>
           <div className="form-sub">{data.service === 'banho' ? 'O preço varia conforme o porte. Comece selecionando o tamanho do seu pet.' : 'Vamos adequar o atendimento ao seu bichinho.'}</div>
           <div className="pet-type-grid">
-            <button className={`pet-pill ${data.petType === 'dog' ? 'selected' : ''}`} onClick={() => update({ petType: 'dog' })}>
+            <button className={`pet-pill ${data.petType === 'dog' ? 'selected' : ''}`} onClick={() => update({ petType: 'dog', vaccine: null })}>
               <div className="pet-pill-glyph">🐕</div><div className="pet-pill-name">Cachorro</div>
             </button>
-            <button className={`pet-pill ${data.petType === 'cat' ? 'selected' : ''}`} onClick={() => update({ petType: 'cat' })}>
+            <button className={`pet-pill ${data.petType === 'cat' ? 'selected' : ''}`} onClick={() => update({ petType: 'cat', vaccine: null })}>
               <div className="pet-pill-glyph">🐈</div><div className="pet-pill-name">Gato</div>
             </button>
           </div>
@@ -298,6 +323,24 @@ export default function Scheduler() {
               </select>
             </div>
           </div>
+          {data.service === 'vacina' && data.petType && (
+            <div style={{ marginTop: 22 }}>
+              <div className="label" style={{ marginBottom: 10 }}>💉 Escolha a vacina</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {(VACCINES[data.petType] ?? []).map(v => {
+                  const selected = data.vaccine === v.id
+                  return (
+                    <button key={v.id} type="button" onClick={() => update({ vaccine: v.id })}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 12, border: `2px solid ${selected ? '#004A99' : '#e5e7eb'}`, background: selected ? '#EFF6FF' : '#fff', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
+                      <span style={{ fontSize: 14, fontWeight: selected ? 700 : 500, color: selected ? '#004A99' : '#333' }}>{v.name}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: selected ? '#004A99' : '#EF7720', flexShrink: 0, marginLeft: 12 }}>{v.priceLabel}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {data.service === 'banho' && (
             <div style={{ marginTop: 22 }}>
               <div className="label" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -372,6 +415,7 @@ export default function Scheduler() {
           <div className="summary-box">
             <div className="summary-row"><span className="k">Serviço</span><span className="v">{SERVICES.find(s => s.id === data.service)?.name}</span></div>
             {data.vetSubService && <div className="summary-row"><span className="k">Tipo</span><span className="v">{VET_SUB_SERVICES.find(s => s.id === data.vetSubService)?.name}</span></div>}
+            {data.vaccine && <div className="summary-row"><span className="k">Vacina</span><span className="v">{(VACCINES[data.petType ?? ''] ?? []).find(v => v.id === data.vaccine)?.name}</span></div>}
             <div className="summary-row"><span className="k">Unidade</span><span className="v">Marreiro {UNITS.find(u => u.id === data.unit)?.name}</span></div>
             <div className="summary-row"><span className="k">Data & horário</span><span className="v">{data.date?.day}/{((data.date?.date.getMonth() ?? 0) + 1).toString().padStart(2, '0')} às {data.time}</span></div>
           </div>
