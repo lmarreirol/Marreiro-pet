@@ -789,7 +789,7 @@ export default function Dashboard() {
                                         .then(data => { setRescheduleSlots(data.slots ?? []); setRescheduleSlotsLoading(false) })
                                         .catch(() => setRescheduleSlotsLoading(false))
                                     }} style={{ width: '100%', marginTop: 2, padding: '4px', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: '1px solid #6366f1', background: 'transparent', color: '#6366f1' }}>
-                                      📅 Remarcar
+                                      🔄 Remarcar
                                     </button>
                                   </div>
                                 ))}
