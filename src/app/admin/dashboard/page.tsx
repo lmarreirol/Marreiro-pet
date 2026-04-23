@@ -568,15 +568,16 @@ export default function Dashboard() {
               const pros: (string | null)[] = []
               filteredAppointments.forEach(a => { const p = a.professional ?? null; if (!pros.includes(p)) pros.push(p) })
               pros.sort((a, b) => (a ?? 'zzz').localeCompare(b ?? 'zzz'))
+              const visiblePros = pros.filter(p => p !== null)
               const getAppts = (slot: string, pro: string | null) => filteredAppointments.filter(a => a.appointmentTime === slot && (a.professional ?? null) === pro)
-              const activeSlots = slots.filter(slot => pros.some(pro => getAppts(slot, pro).length > 0))
+              const activeSlots = slots.filter(slot => visiblePros.some(pro => getAppts(slot, pro).length > 0))
               const minSlot = activeSlots[0] ?? '08:00'
               const maxSlot = activeSlots[activeSlots.length - 1] ?? '18:00'
               const minIdx = slots.indexOf(minSlot)
               const maxIdx = slots.indexOf(maxSlot)
               const visibleSlots = slots.slice(Math.max(0, minIdx - 1), maxIdx + 3)
               const COL_MIN_W = 200
-              const gridMinW = TIME_W + pros.length * COL_MIN_W
+              const gridMinW = TIME_W + visiblePros.length * COL_MIN_W
               return (
                 <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
                   {/* Único container com scroll horizontal + vertical */}
@@ -585,8 +586,8 @@ export default function Dashboard() {
                   {/* Header — sticky no topo, rola horizontalmente com o conteúdo */}
                   <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#f8fafc', position: 'sticky', top: 0, zIndex: 10 }}>
                     <div style={{ width: TIME_W, flexShrink: 0, borderRight: '1px solid #e5e7eb', position: 'sticky', left: 0, background: '#f8fafc', zIndex: 11 }} />
-                    {pros.map((pro, pi) => (
-                      <div key={pi} style={{ flex: 1, minWidth: COL_MIN_W, padding: '14px 16px', borderRight: pi < pros.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
+                    {visiblePros.map((pro, pi) => (
+                      <div key={pi} style={{ flex: 1, minWidth: COL_MIN_W, padding: '14px 16px', borderRight: pi < visiblePros.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #004A99, #0066cc)', color: '#fff', fontWeight: 900, fontSize: pro ? 16 : 18, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             {pro ? (PRO_NAME_MAP[pro] ?? pro)[0].toUpperCase() : '💈'}
@@ -602,18 +603,18 @@ export default function Dashboard() {
                   {/* Grid */}
                     {visibleSlots.map((slot) => {
                       const isHour = slot.endsWith(':00')
-                      const hasAny = pros.some(pro => getAppts(slot, pro).length > 0)
+                      const hasAny = visiblePros.some(pro => getAppts(slot, pro).length > 0)
                       return (
                         <div key={slot} style={{ display: 'flex', borderBottom: `1px solid ${isHour ? '#e5e7eb' : '#f3f4f6'}`, minHeight: SLOT_H, background: !hasAny ? (isHour ? '#fafafa' : '#fdfdfd') : '#fff' }}>
                           {/* Coluna de horário — sticky à esquerda */}
                           <div style={{ width: TIME_W, flexShrink: 0, borderRight: '1px solid #e5e7eb', position: 'sticky', left: 0, background: !hasAny ? (isHour ? '#fafafa' : '#fdfdfd') : '#fff', zIndex: 5, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 10, fontSize: isHour ? 13 : 11, fontWeight: isHour ? 700 : 400, color: isHour ? '#444' : '#ccc' }}>
                             {slot}
                           </div>
-                          {pros.map((pro, pi) => {
+                          {visiblePros.map((pro, pi) => {
                             const appts = getAppts(slot, pro)
                             const isEmpty = appts.length === 0
                             return (
-                              <div key={pi} onClick={() => isEmpty && setBookingSlot({ slot, pro })} style={{ flex: 1, minWidth: COL_MIN_W, borderRight: pi < pros.length - 1 ? '1px solid #f0f4f8' : 'none', padding: 6, cursor: isEmpty ? 'pointer' : 'default', position: 'relative', display: 'flex', flexDirection: 'column', gap: 4 }}
+                              <div key={pi} onClick={() => isEmpty && setBookingSlot({ slot, pro })} style={{ flex: 1, minWidth: COL_MIN_W, borderRight: pi < visiblePros.length - 1 ? '1px solid #f0f4f8' : 'none', padding: 6, cursor: isEmpty ? 'pointer' : 'default', position: 'relative', display: 'flex', flexDirection: 'column', gap: 4 }}
                                 onMouseEnter={e => { if (isEmpty) (e.currentTarget as HTMLElement).style.background = '#f0f6ff' }}
                                 onMouseLeave={e => { if (isEmpty) (e.currentTarget as HTMLElement).style.background = '' }}
                               >
