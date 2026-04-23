@@ -10,8 +10,8 @@ const SERVICES = [
 ]
 
 const VET_SUB_SERVICES = [
-  { id: 'clinico-geral', name: 'Consulta Clínico Geral', price: 80, sub: 'R$ 80,00' },
-  { id: 'plantao', name: 'Consulta Plantão', price: 120, sub: 'R$ 120,00 · 19h–07h e feriados' },
+  { id: 'clinico-geral', name: 'Consulta Clínico Geral', price: 80, priceLabel: 'R$ 80,00', info: '' },
+  { id: 'plantao', name: 'Consulta Plantão', price: 120, priceLabel: 'R$ 120,00', info: '19h–07h e feriados' },
 ]
 
 const UNITS = [
@@ -250,7 +250,13 @@ export default function Scheduler() {
                 {VET_SUB_SERVICES.map(s => (
                   <button key={s.id} className={`tile ${data.vetSubService === s.id ? 'selected' : ''}`} onClick={() => update({ vetSubService: s.id })}>
                     <div className="tile-icon">🩺</div>
-                    <div><div className="tile-title">{s.name}</div><div className="tile-sub">{s.sub}</div></div>
+                    <div>
+                      <div className="tile-title">{s.name}</div>
+                      <div style={{ marginTop: 3 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: data.vetSubService === s.id ? '#004A99' : '#EF7720' }}>{s.priceLabel}</span>
+                        {s.info && <span className="tile-sub" style={{ display: 'block', marginTop: 1 }}>{s.info}</span>}
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
