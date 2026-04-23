@@ -98,6 +98,8 @@ export default function Dashboard() {
   const [reschedulingAppt, setReschedulingAppt] = useState<Appointment | null>(null)
   const [rescheduleForm, setRescheduleForm] = useState({ date: '', time: '' })
   const [rescheduleSaving, setRescheduleSaving] = useState(false)
+  const [rescheduleSlots, setRescheduleSlots] = useState<{ time: string; availableCount: number }[]>([])
+  const [rescheduleSlotsLoading, setRescheduleSlotsLoading] = useState(false)
 
   const saveReschedule = async () => {
     if (!reschedulingAppt || !rescheduleForm.date || !rescheduleForm.time) return
@@ -444,14 +446,32 @@ export default function Dashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={labelStyle}>Nova data</label>
-                <input type="date" value={rescheduleForm.date} onChange={e => setRescheduleForm(f => ({ ...f, date: e.target.value }))} style={inputStyle} min={new Date().toISOString().split('T')[0]} />
+                <input type="date" value={rescheduleForm.date} min={new Date().toISOString().split('T')[0]}
+                  onChange={e => {
+                    const d = e.target.value
+                    setRescheduleForm(f => ({ ...f, date: d, time: '' }))
+                    if (d && reschedulingAppt) {
+                      setRescheduleSlotsLoading(true)
+                      fetch(`/api/available-slots?unitId=${reschedulingAppt.unitId}&date=${d}`)
+                        .then(r => r.json())
+                        .then(data => { setRescheduleSlots(data.slots ?? []); setRescheduleSlotsLoading(false) })
+                        .catch(() => setRescheduleSlotsLoading(false))
+                    }
+                  }}
+                  style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>Novo horário</label>
-                <select value={rescheduleForm.time} onChange={e => setRescheduleForm(f => ({ ...f, time: e.target.value }))} style={inputStyle}>
-                  <option value="">Selecione o horário</option>
-                  {ALL_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                {rescheduleSlotsLoading ? (
+                  <div style={{ ...inputStyle, color: '#aaa', fontSize: 13 }}>Carregando horários...</div>
+                ) : (
+                  <select value={rescheduleForm.time} onChange={e => setRescheduleForm(f => ({ ...f, time: e.target.value }))} style={inputStyle} disabled={!rescheduleForm.date}>
+                    <option value="">{rescheduleForm.date ? 'Selecione o horário' : 'Selecione a data primeiro'}</option>
+                    {rescheduleSlots.filter(s => s.availableCount > 0).map(s => (
+                      <option key={s.time} value={s.time}>{s.time}</option>
+                    ))}
+                  </select>
+                )}
               </div>
               {rescheduleForm.date && rescheduleForm.time && (
                 <div style={{ background: '#f0f6ff', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#004A99', fontWeight: 700 }}>
@@ -711,7 +731,18 @@ export default function Dashboard() {
                                         </button>
                                       ))}
                                     </div>
-                                    <button onClick={e => { e.stopPropagation(); setReschedulingAppt(a); setRescheduleForm({ date: a.appointmentDate.split('T')[0], time: a.appointmentTime }) }} style={{ width: '100%', marginTop: 2, padding: '4px', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: '1px solid #6366f1', background: 'transparent', color: '#6366f1' }}>
+                                    <button onClick={e => {
+                                      e.stopPropagation()
+                                      const d = a.appointmentDate.split('T')[0]
+                                      setReschedulingAppt(a)
+                                      setRescheduleForm({ date: d, time: a.appointmentTime })
+                                      setRescheduleSlots([])
+                                      setRescheduleSlotsLoading(true)
+                                      fetch(`/api/available-slots?unitId=${a.unitId}&date=${d}`)
+                                        .then(r => r.json())
+                                        .then(data => { setRescheduleSlots(data.slots ?? []); setRescheduleSlotsLoading(false) })
+                                        .catch(() => setRescheduleSlotsLoading(false))
+                                    }} style={{ width: '100%', marginTop: 2, padding: '4px', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: '1px solid #6366f1', background: 'transparent', color: '#6366f1' }}>
                                       📅 Remarcar
                                     </button>
                                   </div>
