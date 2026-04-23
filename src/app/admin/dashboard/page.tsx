@@ -772,7 +772,7 @@ export default function Dashboard() {
                                         { s: 'COMPLETED', icon: '★', title: 'Concluir' },
                                         { s: 'CANCELLED', icon: '✕', title: 'Cancelar' },
                                       ].map(({ s, icon, title }) => (
-                                        <button key={s} onClick={e => { e.stopPropagation(); updateStatus(a.id, a.status === s ? 'AWAITING_PAYMENT' : s) }} title={a.status === s ? 'Clique para deixar pendente' : title} style={{ flex: 1, padding: '5px 2px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1px solid ${STATUS_COLORS[s]}`, background: a.status === s ? STATUS_COLORS[s] : 'transparent', color: a.status === s ? '#fff' : STATUS_COLORS[s] }}>
+                                        <button key={s} onClick={e => { e.stopPropagation(); updateStatus(a.id, s) }} title={title} style={{ flex: 1, padding: '5px 2px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1px solid ${STATUS_COLORS[s]}`, background: a.status === s ? STATUS_COLORS[s] : 'transparent', color: a.status === s ? '#fff' : STATUS_COLORS[s] }}>
                                           {icon}
                                         </button>
                                       ))}
