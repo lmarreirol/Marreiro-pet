@@ -97,6 +97,7 @@ export default function Dashboard() {
   const [editForm, setEditForm] = useState({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [] as string[], notes: '', isVip: false, status: 'CONFIRMED' })
   const [editSaving, setEditSaving] = useState(false)
   const [editLocked, setEditLocked] = useState(true)
+  const [cpfCopied, setCpfCopied] = useState(false)
   const [reschedulingAppt, setReschedulingAppt] = useState<Appointment | null>(null)
   const [rescheduleForm, setRescheduleForm] = useState({ date: '', time: '' })
   const [rescheduleSaving, setRescheduleSaving] = useState(false)
@@ -204,6 +205,7 @@ export default function Dashboard() {
   const openEditAppt = (a: Appointment) => {
     setEditingAppt(a)
     setEditLocked(true)
+    setCpfCopied(false)
     setEditForm({ petName: a.petName, petBreed: a.petBreed ?? '', petSize: a.petSize ?? 'small', tutorName: a.tutorName, phone: a.phone, pkg: a.package ?? 'banho', addons: a.addons ?? [], notes: a.notes ?? '', isVip: a.isVip, status: a.status })
   }
 
@@ -394,6 +396,22 @@ export default function Dashboard() {
               <div>
                 <label style={labelStyle}>Telefone</label>
                 <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} disabled={editLocked} />
+              </div>
+              <div style={{ gridColumn: '1/-1' }}>
+                <label style={labelStyle}>CPF do tutor</label>
+                {editingAppt?.tutorCpf ? (
+                  <div onClick={() => {
+                    navigator.clipboard.writeText((editingAppt.tutorCpf ?? '').replace(/\D/g, ''))
+                    setCpfCopied(true)
+                    setTimeout(() => setCpfCopied(false), 2000)
+                  }} title="Clique para copiar o CPF"
+                    style={{ ...inputStyle, background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none', color: cpfCopied ? '#16a34a' : '#0F1B2D', borderColor: cpfCopied ? '#16a34a' : '#e5e7eb', transition: 'all 0.2s' }}>
+                    <span style={{ fontWeight: 700, letterSpacing: 1 }}>{editingAppt.tutorCpf}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: cpfCopied ? '#16a34a' : '#aaa' }}>{cpfCopied ? '✓ Copiado!' : '📋 Copiar'}</span>
+                  </div>
+                ) : (
+                  <div style={{ ...inputStyle, background: '#f8fafc', color: '#bbb', fontStyle: 'italic' }}>Não informado</div>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Pacote</label>
