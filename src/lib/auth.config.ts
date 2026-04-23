@@ -15,9 +15,9 @@ export const authConfig: NextAuthConfig = {
     },
     session({ session, token }) {
       if (session.user) {
-        (session.user as Record<string, unknown>).role = token.role
-        ;(session.user as Record<string, unknown>).unitId = token.unitId
-        ;(session.user as Record<string, unknown>).username = token.username
+        (session.user as unknown as Record<string, unknown>).role = token.role
+        ;(session.user as unknown as Record<string, unknown>).unitId = token.unitId
+        ;(session.user as unknown as Record<string, unknown>).username = token.username
       }
       return session
     },
