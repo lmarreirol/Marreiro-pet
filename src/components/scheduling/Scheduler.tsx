@@ -135,6 +135,7 @@ export default function Scheduler() {
           petName: data.petName,
           petSize: data.size ?? null,
           tutorName: data.tutorName,
+          tutorCpf: data.cpf || null,
           phone: data.phone,
           notes: data.notes || null,
           date: data.date?.date.toISOString(),
