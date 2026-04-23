@@ -96,6 +96,7 @@ export default function Dashboard() {
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null)
   const [editForm, setEditForm] = useState({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [] as string[], notes: '', isVip: false, status: 'CONFIRMED' })
   const [editSaving, setEditSaving] = useState(false)
+  const [editLocked, setEditLocked] = useState(true)
   const [reschedulingAppt, setReschedulingAppt] = useState<Appointment | null>(null)
   const [rescheduleForm, setRescheduleForm] = useState({ date: '', time: '' })
   const [rescheduleSaving, setRescheduleSaving] = useState(false)
@@ -202,6 +203,7 @@ export default function Dashboard() {
 
   const openEditAppt = (a: Appointment) => {
     setEditingAppt(a)
+    setEditLocked(true)
     setEditForm({ petName: a.petName, petBreed: a.petBreed ?? '', petSize: a.petSize ?? 'small', tutorName: a.tutorName, phone: a.phone, pkg: a.package ?? 'banho', addons: a.addons ?? [], notes: a.notes ?? '', isVip: a.isVip, status: a.status })
   }
 
@@ -352,20 +354,34 @@ export default function Dashboard() {
                 <div style={{ fontWeight: 900, fontSize: 18, color: '#0F1B2D' }}>Editar Agendamento</div>
                 <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>{editingAppt.appointmentTime} · {new Date(editingAppt.appointmentDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</div>
               </div>
-              <button onClick={() => setEditingAppt(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#aaa' }}>×</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* Cadeado */}
+                <button onClick={() => setEditLocked(l => !l)} title={editLocked ? 'Clique para editar' : 'Bloquear edição'}
+                  style={{ background: editLocked ? '#f0f4f8' : '#fff4ed', border: `1.5px solid ${editLocked ? '#e5e7eb' : '#EF7720'}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer', fontSize: 18, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {editLocked ? '🔒' : '🔓'}
+                </button>
+                <button onClick={() => setEditingAppt(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#aaa' }}>×</button>
+              </div>
             </div>
+
+            {editLocked && (
+              <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#888', display: 'flex', alignItems: 'center', gap: 8 }}>
+                🔒 <span>Clique no cadeado para habilitar a edição dos campos.</span>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ gridColumn: '1/-1' }}>
                 <label style={labelStyle}>Nome do pet *</label>
-                <input style={inputStyle} value={editForm.petName} onChange={e => setEditForm(f => ({ ...f, petName: e.target.value }))} autoFocus />
+                <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.petName} onChange={e => setEditForm(f => ({ ...f, petName: e.target.value }))} disabled={editLocked} />
               </div>
               <div>
                 <label style={labelStyle}>Raça</label>
-                <input style={inputStyle} value={editForm.petBreed} onChange={e => setEditForm(f => ({ ...f, petBreed: e.target.value }))} />
+                <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.petBreed} onChange={e => setEditForm(f => ({ ...f, petBreed: e.target.value }))} disabled={editLocked} />
               </div>
               <div>
                 <label style={labelStyle}>Porte</label>
-                <select style={inputStyle} value={editForm.petSize} onChange={e => setEditForm(f => ({ ...f, petSize: e.target.value }))}>
+                <select style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.petSize} onChange={e => setEditForm(f => ({ ...f, petSize: e.target.value }))} disabled={editLocked}>
                   <option value="small">Pequeno</option>
                   <option value="medium">Médio</option>
                   <option value="large">Grande</option>
@@ -373,15 +389,15 @@ export default function Dashboard() {
               </div>
               <div>
                 <label style={labelStyle}>Tutor *</label>
-                <input style={inputStyle} value={editForm.tutorName} onChange={e => setEditForm(f => ({ ...f, tutorName: e.target.value }))} />
+                <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.tutorName} onChange={e => setEditForm(f => ({ ...f, tutorName: e.target.value }))} disabled={editLocked} />
               </div>
               <div>
                 <label style={labelStyle}>Telefone</label>
-                <input style={inputStyle} value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+                <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} disabled={editLocked} />
               </div>
               <div>
                 <label style={labelStyle}>Pacote</label>
-                <select style={inputStyle} value={editForm.pkg} onChange={e => setEditForm(f => ({ ...f, pkg: e.target.value }))}>
+                <select style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.pkg} onChange={e => setEditForm(f => ({ ...f, pkg: e.target.value }))} disabled={editLocked}>
                   <option value="banho">Banho Tradicional</option>
                   <option value="banho-tosa">Banho + Tosa Higiênica</option>
                   <option value="spa">Tosa Completa + Banho</option>
@@ -389,7 +405,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <label style={labelStyle}>Status</label>
-                <select style={inputStyle} value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}>
+                <select style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))} disabled={editLocked}>
                   <option value="AWAITING_PAYMENT">Aguard. pagamento</option>
                   <option value="CONFIRMED">Confirmado</option>
                   <option value="COMPLETED">Concluído</option>
@@ -402,8 +418,8 @@ export default function Dashboard() {
                   {Object.entries(ADDONS).map(([id, label]) => {
                     const checked = editForm.addons.includes(id)
                     return (
-                      <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, border: `1.5px solid ${checked ? '#EF7720' : '#e5e7eb'}`, background: checked ? '#fff4ed' : '#fff', cursor: 'pointer', fontSize: 13, fontWeight: checked ? 700 : 400, color: checked ? '#EF7720' : '#555', userSelect: 'none' }}>
-                        <input type="checkbox" checked={checked} onChange={() => setEditForm(f => ({ ...f, addons: checked ? f.addons.filter(a => a !== id) : [...f.addons, id] }))} style={{ display: 'none' }} />
+                      <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, border: `1.5px solid ${checked ? '#EF7720' : '#e5e7eb'}`, background: checked ? '#fff4ed' : '#f8fafc', cursor: editLocked ? 'default' : 'pointer', fontSize: 13, fontWeight: checked ? 700 : 400, color: checked ? '#EF7720' : (editLocked ? '#bbb' : '#555'), userSelect: 'none', opacity: editLocked ? 0.7 : 1 }}>
+                        <input type="checkbox" checked={checked} onChange={() => !editLocked && setEditForm(f => ({ ...f, addons: checked ? f.addons.filter(a => a !== id) : [...f.addons, id] }))} style={{ display: 'none' }} disabled={editLocked} />
                         {label}
                       </label>
                     )
@@ -416,19 +432,19 @@ export default function Dashboard() {
               </div>
               <div style={{ gridColumn: '1/-1' }}>
                 <label style={labelStyle}>Observações</label>
-                <textarea style={{ ...inputStyle, height: 64, resize: 'vertical' }} value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} />
+                <textarea style={{ ...inputStyle, height: 64, resize: editLocked ? 'none' : 'vertical', background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} disabled={editLocked} />
               </div>
-              <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input type="checkbox" id="edit-vip-check" checked={editForm.isVip} onChange={e => setEditForm(f => ({ ...f, isVip: e.target.checked }))} style={{ width: 16, height: 16, accentColor: '#EF7720', cursor: 'pointer' }} />
-                <label htmlFor="edit-vip-check" style={{ fontSize: 13, fontWeight: 600, color: '#555', cursor: 'pointer' }}>⭐ Encaixe VIP</label>
+              <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 8, opacity: editLocked ? 0.5 : 1 }}>
+                <input type="checkbox" id="edit-vip-check" checked={editForm.isVip} onChange={e => !editLocked && setEditForm(f => ({ ...f, isVip: e.target.checked }))} style={{ width: 16, height: 16, accentColor: '#EF7720', cursor: editLocked ? 'default' : 'pointer' }} disabled={editLocked} />
+                <label htmlFor="edit-vip-check" style={{ fontSize: 13, fontWeight: 600, color: '#555', cursor: editLocked ? 'default' : 'pointer' }}>⭐ Encaixe VIP</label>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-              <button onClick={saveEditAppt} disabled={!editForm.petName || !editForm.tutorName || editSaving}
-                style={{ flex: 1, padding: '13px', borderRadius: 12, background: '#004A99', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer', border: 'none', opacity: (!editForm.petName || !editForm.tutorName) ? 0.5 : 1 }}>
+              <button onClick={saveEditAppt} disabled={editLocked || !editForm.petName || !editForm.tutorName || editSaving}
+                style={{ flex: 1, padding: '13px', borderRadius: 12, background: '#004A99', color: '#fff', fontWeight: 800, fontSize: 15, cursor: editLocked ? 'not-allowed' : 'pointer', border: 'none', opacity: (editLocked || !editForm.petName || !editForm.tutorName) ? 0.4 : 1 }}>
                 {editSaving ? 'Salvando...' : 'Salvar Alterações'}
               </button>
-              <button onClick={() => setEditingAppt(null)} style={{ padding: '13px 18px', borderRadius: 12, background: '#f0f4f8', color: '#555', fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none' }}>Cancelar</button>
+              <button onClick={() => setEditingAppt(null)} style={{ padding: '13px 18px', borderRadius: 12, background: '#f0f4f8', color: '#555', fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none' }}>Fechar</button>
             </div>
           </div>
         </div>
