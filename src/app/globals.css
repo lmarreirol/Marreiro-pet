@@ -790,9 +790,8 @@ img { max-width: 100%; display: block; }
   display: flex; align-items: center; justify-content: center; gap: 8px;
   padding-top: 16px; font-size: 12px; color: rgba(255,255,255,0.4);
 }
-.footer-tarly a { display: flex; align-items: center; opacity: 0.6; transition: opacity 0.2s; }
+.footer-tarly a { display: flex; align-items: center; opacity: 0.7; transition: opacity 0.2s; }
 .footer-tarly a:hover { opacity: 1; }
-.footer-tarly img { mix-blend-mode: screen; }
 @media (max-width: 800px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
 
 .wa-float {
