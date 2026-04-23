@@ -768,29 +768,29 @@ export default function Dashboard() {
                                     </div>
                                     <div style={{ display: 'flex', gap: 4 }}>
                                       {[
-                                        { s: 'CONFIRMED', label: 'Confirmar' },
-                                        { s: 'COMPLETED', label: 'Concluir' },
-                                        { s: 'CANCELLED', label: 'Cancelar' },
-                                      ].map(({ s, label }) => (
-                                        <button key={s} onClick={e => { e.stopPropagation(); updateStatus(a.id, s) }} style={{ flex: 1, padding: '4px 2px', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: `1px solid ${STATUS_COLORS[s]}`, background: a.status === s ? STATUS_COLORS[s] : 'transparent', color: a.status === s ? '#fff' : STATUS_COLORS[s] }}>
-                                          {label}
+                                        { s: 'CONFIRMED', icon: '✓', title: 'Confirmar' },
+                                        { s: 'COMPLETED', icon: '★', title: 'Concluir' },
+                                        { s: 'CANCELLED', icon: '✕', title: 'Cancelar' },
+                                      ].map(({ s, icon, title }) => (
+                                        <button key={s} onClick={e => { e.stopPropagation(); updateStatus(a.id, s) }} title={title} style={{ flex: 1, padding: '5px 2px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1px solid ${STATUS_COLORS[s]}`, background: a.status === s ? STATUS_COLORS[s] : 'transparent', color: a.status === s ? '#fff' : STATUS_COLORS[s] }}>
+                                          {icon}
                                         </button>
                                       ))}
+                                      <button onClick={e => {
+                                        e.stopPropagation()
+                                        const d = a.appointmentDate.split('T')[0]
+                                        setReschedulingAppt(a)
+                                        setRescheduleForm({ date: d, time: a.appointmentTime })
+                                        setRescheduleSlots([])
+                                        setRescheduleSlotsLoading(true)
+                                        fetch(`/api/available-slots?unitId=${a.unitId}&date=${d}`)
+                                          .then(r => r.json())
+                                          .then(data => { setRescheduleSlots(data.slots ?? []); setRescheduleSlotsLoading(false) })
+                                          .catch(() => setRescheduleSlotsLoading(false))
+                                      }} title="Remarcar" style={{ flex: 1, padding: '5px 2px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: '1px solid #6366f1', background: 'transparent', color: '#6366f1' }}>
+                                        🔄
+                                      </button>
                                     </div>
-                                    <button onClick={e => {
-                                      e.stopPropagation()
-                                      const d = a.appointmentDate.split('T')[0]
-                                      setReschedulingAppt(a)
-                                      setRescheduleForm({ date: d, time: a.appointmentTime })
-                                      setRescheduleSlots([])
-                                      setRescheduleSlotsLoading(true)
-                                      fetch(`/api/available-slots?unitId=${a.unitId}&date=${d}`)
-                                        .then(r => r.json())
-                                        .then(data => { setRescheduleSlots(data.slots ?? []); setRescheduleSlotsLoading(false) })
-                                        .catch(() => setRescheduleSlotsLoading(false))
-                                    }} style={{ width: '100%', marginTop: 2, padding: '4px', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: '1px solid #6366f1', background: 'transparent', color: '#6366f1' }}>
-                                      🔄 Remarcar
-                                    </button>
                                   </div>
                                 ))}
                               </div>
