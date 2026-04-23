@@ -243,12 +243,25 @@ export default function GroomingSection() {
   const totalDurationMin = (pkg?.durationMin ?? 0) + selectedAddons.reduce((s, a) => s + a.durationMin, 0)
   const slotsNeeded = Math.ceil(totalDurationMin / 30) || 1
 
+  const validateCpf = (cpf: string) => {
+    const n = cpf.replace(/\D/g, '')
+    if (n.length !== 11 || /^(\d)\1+$/.test(n)) return false
+    let sum = 0
+    for (let i = 0; i < 9; i++) sum += parseInt(n[i]) * (10 - i)
+    let r = (sum * 10) % 11; if (r === 10 || r === 11) r = 0
+    if (r !== parseInt(n[9])) return false
+    sum = 0
+    for (let i = 0; i < 10; i++) sum += parseInt(n[i]) * (11 - i)
+    r = (sum * 10) % 11; if (r === 10 || r === 11) r = 0
+    return r === parseInt(n[10])
+  }
+
   const canNext = () => {
     if (step === 0) return !!data.package
     if (step === 1) return true
     if (step === 2) return data.professional && data.unit
     if (step === 3) return data.date && data.time
-    if (step === 4) return data.petName && data.tutorName && data.phone && data.cpf && data.size
+    if (step === 4) return data.petName && data.tutorName && data.phone && data.cpf && data.size && validateCpf(data.cpf)
     return false
   }
 
@@ -527,12 +540,13 @@ export default function GroomingSection() {
                       </div>
                       <div>
                         <div className="label" style={{ marginBottom: 6 }}>WhatsApp *</div>
-                        <input className="input" placeholder="(85) 9 9999-9999" value={data.phone} onChange={e => update({ phone: e.target.value })} />
+                        <input className="input" placeholder="(85) 9 9999-9999" value={data.phone} inputMode="numeric" onChange={e => update({ phone: e.target.value.replace(/\D/g, '') })} />
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="label" style={{ marginBottom: 6 }}>CPF *</div>
-                      <input className="input" placeholder="000.000.000-00" value={data.cpf} onChange={e => update({ cpf: e.target.value })} />
+                      <input className="input" placeholder="000.000.000-00" value={data.cpf} inputMode="numeric" onChange={e => update({ cpf: e.target.value.replace(/\D/g, '') })} style={{ borderColor: data.cpf && !validateCpf(data.cpf) ? '#dc2626' : undefined }} />
+                      {data.cpf && !validateCpf(data.cpf) && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>CPF inválido</div>}
                     </div>
                     <div className="form-row">
                       <div className="label" style={{ marginBottom: 6 }}>Observações (alergias, comportamento, preferências)</div>
