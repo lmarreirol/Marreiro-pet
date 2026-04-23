@@ -77,6 +77,18 @@ function SucessoContent() {
 
   useEffect(() => {
     if (!id) return
+
+    // MP redireciona com ?status=approved&payment_id=... — confirma o agendamento direto
+    const mpStatus = searchParams.get('status') ?? searchParams.get('collection_status')
+    const paymentId = searchParams.get('payment_id') ?? searchParams.get('collection_id')
+    if (mpStatus === 'approved' && paymentId) {
+      fetch(`/api/admin/appointments/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'CONFIRMED', paymentStatus: 'APPROVED' }),
+      }).catch(() => {})
+    }
+
     fetch(`/api/appointments/${id}`).then(r => r.json()).then(setApt).catch(() => {})
   }, [id])
 

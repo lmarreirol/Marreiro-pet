@@ -19,6 +19,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.notes !== undefined) data.notes = body.notes
   if (body.isVip !== undefined) data.isVip = body.isVip
   if (body.totalPrice !== undefined) data.totalPrice = body.totalPrice
+  if (body.paymentStatus !== undefined) data.paymentStatus = body.paymentStatus
 
   const updated = await prisma.appointment.update({ where: { id }, data })
   return NextResponse.json(updated)
