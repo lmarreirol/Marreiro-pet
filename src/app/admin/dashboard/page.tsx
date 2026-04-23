@@ -721,9 +721,10 @@ export default function Dashboard() {
                                       <a href={`https://wa.me/55${a.phone.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: '#25D366', fontWeight: 700, textDecoration: 'none' }}>{a.tutorName}</a>
                                       <span style={{ fontSize: 12, fontWeight: 900, color: '#004A99' }}>R$ {Number(a.totalPrice).toFixed(0)}</span>
                                     </div>
-                                    {a.tutorCpf && (
-                                      <div style={{ fontSize: 10, color: '#aaa', fontWeight: 600 }}>CPF: {a.tutorCpf}</div>
-                                    )}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10, color: '#999' }}>
+                                      <span>{a.phone}</span>
+                                      {a.tutorCpf && <span style={{ fontWeight: 700 }}>CPF: {a.tutorCpf}</span>}
+                                    </div>
                                     <div style={{ display: 'flex', gap: 4 }}>
                                       {[
                                         { s: 'CONFIRMED', label: 'Confirmar' },
