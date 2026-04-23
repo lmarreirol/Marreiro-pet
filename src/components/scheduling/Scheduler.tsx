@@ -9,19 +9,23 @@ const SERVICES = [
   { id: 'exames', name: 'Exames', sub: 'Laboratório e imagem', icon: 'pill' as const },
 ]
 
-const VACCINES: Record<string, { id: string; name: string; price: number; priceLabel: string }[]> = {
+const VACCINES: Record<string, { id: string; name: string; price: number; priceLabel: string; diseases?: string[] }[]> = {
   dog: [
     { id: 'v8v10-importada', name: 'Polivalente V8/V10 Importada',  price: 90, priceLabel: 'R$ 90,00' },
     { id: 'vanguard-v10',    name: 'Polivalente V10 Vanguard Plus', price: 95, priceLabel: 'R$ 95,00' },
-    { id: 'antirabica-cao',  name: 'Antirábica (raiva)',         price: 60, priceLabel: 'R$ 60,00' },
-    { id: 'tosse-canis',     name: 'Vacina Tosse dos Canis',     price: 0,  priceLabel: 'A consultar' },
-    { id: 'anti-giardia',    name: 'Anti-Giárdia',               price: 90, priceLabel: 'R$ 90,00' },
+    { id: 'antirabica-cao',  name: 'Antirábica (raiva)',            price: 60, priceLabel: 'R$ 60,00' },
+    { id: 'tosse-canis',     name: 'Vacina Tosse dos Canis',        price: 0,  priceLabel: 'A consultar' },
+    { id: 'anti-giardia',    name: 'Anti-Giárdia',                  price: 90, priceLabel: 'R$ 90,00' },
   ],
   cat: [
-    { id: 'antirabica-gato', name: 'Antirábica (raiva)',  price: 60,  priceLabel: 'R$ 60,00' },
-    { id: 'felina-v3',       name: 'Múltipla Felina V3',  price: 70,  priceLabel: 'R$ 70,00' },
-    { id: 'felina-v4',       name: 'Múltipla Felina V4',  price: 80,  priceLabel: 'R$ 80,00' },
-    { id: 'felina-v5',       name: 'Múltipla Felina V5',  price: 120, priceLabel: 'R$ 120,00' },
+    { id: 'antirabica-gato', name: 'Antirábica (raiva)', price: 60,  priceLabel: 'R$ 60,00',
+      diseases: ['Raiva'] },
+    { id: 'felina-v3',       name: 'Múltipla Felina V3', price: 70,  priceLabel: 'R$ 70,00',
+      diseases: ['Panleucopenia', 'Rinotraqueíte', 'Calicivirose'] },
+    { id: 'felina-v4',       name: 'Múltipla Felina V4', price: 80,  priceLabel: 'R$ 80,00',
+      diseases: ['Panleucopenia', 'Rinotraqueíte', 'Calicivirose', 'Clamidofilose'] },
+    { id: 'felina-v5',       name: 'Múltipla Felina V5', price: 120, priceLabel: 'R$ 120,00',
+      diseases: ['Panleucopenia', 'Rinotraqueíte', 'Calicivirose', 'Clamidofilose', 'Leucemia Felina (FeLV)'] },
   ],
 }
 
@@ -331,9 +335,18 @@ export default function Scheduler() {
                   const selected = data.vaccine === v.id
                   return (
                     <button key={v.id} type="button" onClick={() => update({ vaccine: v.id })}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 12, border: `2px solid ${selected ? '#004A99' : '#e5e7eb'}`, background: selected ? '#EFF6FF' : '#fff', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
-                      <span style={{ fontSize: 14, fontWeight: selected ? 700 : 500, color: selected ? '#004A99' : '#333' }}>{v.name}</span>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: selected ? '#004A99' : '#EF7720', flexShrink: 0, marginLeft: 12 }}>{v.priceLabel}</span>
+                      style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 16px', borderRadius: 12, border: `2px solid ${selected ? '#004A99' : '#e5e7eb'}`, background: selected ? '#EFF6FF' : '#fff', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 14, fontWeight: selected ? 700 : 600, color: selected ? '#004A99' : '#1a1a1a' }}>{v.name}</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: selected ? '#004A99' : '#EF7720', flexShrink: 0, marginLeft: 12 }}>{v.priceLabel}</span>
+                      </div>
+                      {v.diseases && v.diseases.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                          {v.diseases.map(d => (
+                            <span key={d} style={{ fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20, background: selected ? '#dbeafe' : '#f1f5f9', color: selected ? '#1e40af' : '#555', border: `1px solid ${selected ? '#bfdbfe' : '#e5e7eb'}` }}>{d}</span>
+                          ))}
+                        </div>
+                      )}
                     </button>
                   )
                 })}
