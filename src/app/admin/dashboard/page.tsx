@@ -832,7 +832,7 @@ export default function Dashboard() {
         )}
 
         {tab === 'clinic' && (
-          <ClinicTab isAdmin={isAdmin} userUnitId={user?.unitId} />
+          <ClinicTab isAdmin={isAdmin} userUnitId={user?.unitId} onEditAppt={openEditAppt} />
         )}
 
         {tab === 'availability' && (
@@ -865,7 +865,7 @@ const CLINIC_SERVICE_LABELS: Record<string, string> = {
   exames: 'Exames',
 }
 
-function ClinicTab({ isAdmin, userUnitId }: { isAdmin: boolean; userUnitId?: string }) {
+function ClinicTab({ isAdmin, userUnitId, onEditAppt }: { isAdmin: boolean; userUnitId?: string; onEditAppt: (a: Appointment) => void }) {
   const [date, setDate] = useState(todayISO())
   const [unitFilter, setUnitFilter] = useState(isAdmin ? 'all' : (userUnitId ?? 'all'))
   const [serviceFilter, setServiceFilter] = useState('all')
@@ -1014,7 +1014,7 @@ function ClinicTab({ isAdmin, userUnitId }: { isAdmin: boolean; userUnitId?: str
                       Object.values(PROFESSIONALS).flat().forEach(p => { PRO_NAME_MAP[p.id] = p.name })
                       const SIZE_LABEL: Record<string, string> = { small: 'Pequeno', medium: 'Médio', large: 'Grande' }
                       return svcRows.map(a => (
-                      <div key={a.id} style={{ background: '#fff', borderRadius: 10, padding: '10px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${a.status === 'AWAITING_PAYMENT' ? '#e5e7eb' : STATUS_COLORS[a.status]}` }}>
+                      <div key={a.id} onClick={() => onEditAppt(a)} style={{ background: '#fff', borderRadius: 10, padding: '10px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${a.status === 'AWAITING_PAYMENT' ? '#e5e7eb' : STATUS_COLORS[a.status]}`, cursor: 'pointer' }}>
                         {/* Header: horário + badges */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                           <span style={{ fontSize: 14, fontWeight: 900, color: svcColor }}>{a.appointmentTime}</span>
@@ -1053,7 +1053,7 @@ function ClinicTab({ isAdmin, userUnitId }: { isAdmin: boolean; userUnitId?: str
                         )}
                         {/* Footer: contato + preço + ações */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, paddingTop: 6, borderTop: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
-                          <a href={`https://wa.me/55${a.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+                          <a href={`https://wa.me/55${a.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                             style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#25D366', fontWeight: 700, textDecoration: 'none' }}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
                             {a.phone}
@@ -1063,7 +1063,7 @@ function ClinicTab({ isAdmin, userUnitId }: { isAdmin: boolean; userUnitId?: str
                           </span>
                           <div style={{ display: 'flex', gap: 3 }}>
                             {(['CONFIRMED', 'COMPLETED', 'CANCELLED'] as const).map(s => (
-                              <button key={s} onClick={() => updateStatus(a.id, s)} title={STATUS_LABELS[s]}
+                              <button key={s} onClick={e => { e.stopPropagation(); updateStatus(a.id, s) }} title={STATUS_LABELS[s]}
                                 style={{ width: 22, height: 22, borderRadius: 6, border: `1.5px solid ${a.status === s ? STATUS_COLORS[s] : '#e5e7eb'}`, background: a.status === s ? STATUS_COLORS[s] : '#f8fafc', cursor: a.status === s ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: a.status === s ? '#fff' : '#888' }}>
                                 {s === 'CONFIRMED' ? '✓' : s === 'COMPLETED' ? '★' : '✕'}
                               </button>
