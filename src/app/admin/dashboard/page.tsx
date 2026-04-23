@@ -575,14 +575,16 @@ export default function Dashboard() {
               const minIdx = slots.indexOf(minSlot)
               const maxIdx = slots.indexOf(maxSlot)
               const visibleSlots = slots.slice(Math.max(0, minIdx - 1), maxIdx + 3)
+              const COL_MIN_W = 200
+              const gridMinW = TIME_W + pros.length * COL_MIN_W
               return (
                 <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
-                  <div>
+                  <div style={{ overflowX: 'auto' }}>
                   {/* Header */}
-                  <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#f8fafc', position: 'sticky', top: 0, zIndex: 10 }}>
+                  <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#f8fafc', position: 'sticky', top: 0, zIndex: 10, minWidth: gridMinW }}>
                     <div style={{ width: TIME_W, flexShrink: 0, borderRight: '1px solid #e5e7eb' }} />
                     {pros.map((pro, pi) => (
-                      <div key={pi} style={{ flex: 1, padding: '14px 16px', borderRight: pi < pros.length - 1 ? '1px solid #e5e7eb' : 'none', minWidth: 0 }}>
+                      <div key={pi} style={{ flex: 1, minWidth: COL_MIN_W, padding: '14px 16px', borderRight: pi < pros.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #004A99, #0066cc)', color: '#fff', fontWeight: 900, fontSize: pro ? 16 : 18, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             {pro ? (PRO_NAME_MAP[pro] ?? pro)[0].toUpperCase() : '💈'}
@@ -601,7 +603,7 @@ export default function Dashboard() {
                       const isHour = slot.endsWith(':00')
                       const hasAny = pros.some(pro => getAppts(slot, pro).length > 0)
                       return (
-                        <div key={slot} style={{ display: 'flex', borderBottom: `1px solid ${isHour ? '#e5e7eb' : '#f3f4f6'}`, minHeight: SLOT_H, background: !hasAny ? (isHour ? '#fafafa' : '#fdfdfd') : '#fff' }}>
+                        <div key={slot} style={{ display: 'flex', borderBottom: `1px solid ${isHour ? '#e5e7eb' : '#f3f4f6'}`, minHeight: SLOT_H, minWidth: gridMinW, background: !hasAny ? (isHour ? '#fafafa' : '#fdfdfd') : '#fff' }}>
                           <div style={{ width: TIME_W, flexShrink: 0, borderRight: '1px solid #e5e7eb', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 10, fontSize: isHour ? 13 : 11, fontWeight: isHour ? 700 : 400, color: isHour ? '#444' : '#ccc' }}>
                             {slot}
                           </div>
@@ -609,7 +611,7 @@ export default function Dashboard() {
                             const appts = getAppts(slot, pro)
                             const isEmpty = appts.length === 0
                             return (
-                              <div key={pi} onClick={() => isEmpty && setBookingSlot({ slot, pro })} style={{ flex: 1, borderRight: pi < pros.length - 1 ? '1px solid #f0f4f8' : 'none', padding: 6, minWidth: 0, cursor: isEmpty ? 'pointer' : 'default', position: 'relative', display: 'flex', flexDirection: 'column', gap: 4 }}
+                              <div key={pi} onClick={() => isEmpty && setBookingSlot({ slot, pro })} style={{ flex: 1, minWidth: COL_MIN_W, borderRight: pi < pros.length - 1 ? '1px solid #f0f4f8' : 'none', padding: 6, cursor: isEmpty ? 'pointer' : 'default', position: 'relative', display: 'flex', flexDirection: 'column', gap: 4 }}
                                 onMouseEnter={e => { if (isEmpty) (e.currentTarget as HTMLElement).style.background = '#f0f6ff' }}
                                 onMouseLeave={e => { if (isEmpty) (e.currentTarget as HTMLElement).style.background = '' }}
                               >
@@ -659,7 +661,7 @@ export default function Dashboard() {
                       )
                     })}
                   </div>
-                  </div>{/* fim minWidth wrapper */}
+                  </div>{/* fim overflowX wrapper */}
                 </div>
               )
             })()}
