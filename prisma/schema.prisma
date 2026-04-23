@@ -109,6 +109,17 @@ model BlogPost {
   @@index([published])
 }
 
+model Professional {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  unitId    String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([unitId])
+}
+
 model Availability {
   id           String   @id @default(cuid())
   professional String

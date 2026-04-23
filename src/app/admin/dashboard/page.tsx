@@ -1731,8 +1731,10 @@ function BlogTab() {
 }
 
 type UserRow = { id: string; username: string; name: string; role: string; unitId: string | null }
+type ProRow = { id: string; slug: string; name: string; unitId: string; active: boolean }
 
 function SettingsTab() {
+  const [settingsTab, setSettingsTab] = useState<'users' | 'professionals'>('users')
   const [users, setUsers] = useState<UserRow[]>([])
   const [loading, setLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<UserRow | null>(null)
@@ -1802,7 +1804,17 @@ function SettingsTab() {
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 4, display: 'block' }
 
   return (
-    <div style={{ maxWidth: 800 }}>
+    <div style={{ maxWidth: 900 }}>
+      {/* Sub-abas */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#f1f5f9', borderRadius: 12, padding: 4, width: 'fit-content' }}>
+        {[{ id: 'users', label: '👥 Usuários' }, { id: 'professionals', label: '✂️ Profissionais' }].map(t => (
+          <button key={t.id} onClick={() => setSettingsTab(t.id as 'users' | 'professionals')} style={{ padding: '8px 18px', borderRadius: 9, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: settingsTab === t.id ? '#fff' : 'transparent', color: settingsTab === t.id ? '#004A99' : '#888', boxShadow: settingsTab === t.id ? '0 1px 4px rgba(0,0,0,0.10)' : 'none' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {settingsTab === 'users' && <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F1B2D', margin: 0 }}>Gerenciar Usuários</h2>
         <button onClick={() => setCreating(true)} style={{ padding: '10px 20px', borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>
@@ -1897,6 +1909,164 @@ function SettingsTab() {
             <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
               <button onClick={() => { setCreating(false); setCreateError('') }} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#f1f5f9', color: '#444', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>Cancelar</button>
               <button onClick={saveCreate} disabled={createSaving} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', opacity: createSaving ? 0.7 : 1 }}>{createSaving ? 'Criando...' : 'Criar usuário'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      </>}
+
+      {settingsTab === 'professionals' && <ProfessionalsTab />}
+    </div>
+  )
+}
+
+function ProfessionalsTab() {
+  const [pros, setPros] = useState<ProRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editingPro, setEditingPro] = useState<ProRow | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', unitId: '', active: true })
+  const [editSaving, setEditSaving] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createForm, setCreateForm] = useState({ name: '', slug: '', unitId: 'caucaia' })
+  const [createSaving, setCreateSaving] = useState(false)
+  const [createError, setCreateError] = useState('')
+
+  const UNIT_LABELS: Record<string, string> = { caucaia: 'Caucaia', pecem: 'Pecém', saogoncalo: 'São Gonçalo', taiba: 'Taíba' }
+  const UNIT_OPTIONS = Object.entries(UNIT_LABELS).map(([id, label]) => ({ id, label }))
+
+  const load = () => {
+    setLoading(true)
+    fetch('/api/admin/professionals').then(r => r.json()).then(d => { setPros(d); setLoading(false) }).catch(() => setLoading(false))
+  }
+  useEffect(() => { load() }, [])
+
+  const openEdit = (p: ProRow) => { setEditingPro(p); setEditForm({ name: p.name, unitId: p.unitId, active: p.active }) }
+
+  const saveEdit = async () => {
+    if (!editingPro) return
+    setEditSaving(true)
+    await fetch(`/api/admin/professionals/${editingPro.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editForm) })
+    setEditSaving(false); setEditingPro(null); load()
+  }
+
+  const deletePro = async (p: ProRow) => {
+    if (!window.confirm(`Remover "${p.name}"? Os agendamentos existentes não serão afetados.`)) return
+    await fetch(`/api/admin/professionals/${p.id}`, { method: 'DELETE' })
+    load()
+  }
+
+  const toggleActive = async (p: ProRow) => {
+    await fetch(`/api/admin/professionals/${p.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !p.active }) })
+    load()
+  }
+
+  const saveCreate = async () => {
+    setCreateError('')
+    if (!createForm.name || !createForm.slug || !createForm.unitId) { setCreateError('Todos os campos são obrigatórios.'); return }
+    setCreateSaving(true)
+    const res = await fetch('/api/admin/professionals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(createForm) })
+    const data = await res.json()
+    setCreateSaving(false)
+    if (!res.ok) { setCreateError(data.error ?? 'Erro ao criar'); return }
+    setCreating(false); setCreateForm({ name: '', slug: '', unitId: 'caucaia' }); load()
+  }
+
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }
+  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 4, display: 'block' }
+
+  const grouped = Object.entries(UNIT_LABELS).map(([unitId, unitName]) => ({
+    unitId, unitName, pros: pros.filter(p => p.unitId === unitId)
+  }))
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F1B2D', margin: 0 }}>Profissionais</h2>
+        <button onClick={() => setCreating(true)} style={{ padding: '10px 20px', borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+          + Novo profissional
+        </button>
+      </div>
+
+      {loading ? <p style={{ color: '#888' }}>Carregando...</p> : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+          {grouped.map(({ unitId, unitName, pros: unitPros }) => (
+            <div key={unitId} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+              <div style={{ background: '#004A99', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 800, fontSize: 14, color: '#fff' }}>📍 {unitName}</span>
+                <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontWeight: 700, fontSize: 12, padding: '2px 8px', borderRadius: 12 }}>{unitPros.length}</span>
+              </div>
+              <div>
+                {unitPros.length === 0 ? (
+                  <div style={{ padding: '20px 16px', color: '#aaa', fontSize: 13, textAlign: 'center' }}>Nenhum profissional</div>
+                ) : unitPros.map((p, i) => (
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: i < unitPros.length - 1 ? '1px solid #f1f5f9' : 'none', gap: 10 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: p.active ? '#EFF6FF' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>✂️</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: p.active ? '#0F1B2D' : '#aaa' }}>{p.name}</div>
+                      <div style={{ fontSize: 11, color: '#aaa' }}>ID: {p.slug}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <button onClick={() => toggleActive(p)} title={p.active ? 'Desativar' : 'Ativar'} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', background: p.active ? '#dcfce7' : '#f1f5f9', color: p.active ? '#15803d' : '#999' }}>
+                        {p.active ? 'Ativo' : 'Inativo'}
+                      </button>
+                      <button onClick={() => openEdit(p)} style={{ padding: '5px 10px', borderRadius: 8, background: '#f1f5f9', color: '#0F1B2D', fontWeight: 700, fontSize: 11, border: 'none', cursor: 'pointer' }}>Editar</button>
+                      <button onClick={() => deletePro(p)} style={{ padding: '5px 10px', borderRadius: 8, background: '#fff', color: '#dc2626', fontWeight: 700, fontSize: 11, border: '1.5px solid #dc2626', cursor: 'pointer' }}>✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal Editar */}
+      {editingPro && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: '#0F1B2D' }}>Editar profissional</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div><label style={labelStyle}>Nome</label><input style={inputStyle} value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></div>
+              <div><label style={labelStyle}>Unidade</label>
+                <select style={inputStyle} value={editForm.unitId} onChange={e => setEditForm(f => ({ ...f, unitId: e.target.value }))}>
+                  {UNIT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input type="checkbox" id="active-toggle" checked={editForm.active} onChange={e => setEditForm(f => ({ ...f, active: e.target.checked }))} style={{ width: 16, height: 16, cursor: 'pointer' }} />
+                <label htmlFor="active-toggle" style={{ fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Profissional ativo</label>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+              <button onClick={() => setEditingPro(null)} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#f1f5f9', color: '#444', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={saveEdit} disabled={editSaving} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', opacity: editSaving ? 0.7 : 1 }}>{editSaving ? 'Salvando...' : 'Salvar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Criar */}
+      {creating && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: '#0F1B2D' }}>Novo Profissional</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div><label style={labelStyle}>Nome completo</label><input style={inputStyle} placeholder="Ex: João Silva" value={createForm.name} onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))} /></div>
+              <div>
+                <label style={labelStyle}>ID único (slug)</label>
+                <input style={inputStyle} placeholder="ex: joao" value={createForm.slug} onChange={e => setCreateForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') }))} />
+                <div style={{ fontSize: 11, color: '#aaa', marginTop: 3 }}>Usado internamente para identificar o profissional. Só letras e hífens.</div>
+              </div>
+              <div><label style={labelStyle}>Unidade</label>
+                <select style={inputStyle} value={createForm.unitId} onChange={e => setCreateForm(f => ({ ...f, unitId: e.target.value }))}>
+                  {UNIT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+              </div>
+              {createError && <p style={{ color: '#dc2626', fontSize: 13, margin: 0 }}>{createError}</p>}
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+              <button onClick={() => { setCreating(false); setCreateError('') }} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#f1f5f9', color: '#444', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={saveCreate} disabled={createSaving} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', opacity: createSaving ? 0.7 : 1 }}>{createSaving ? 'Criando...' : 'Criar'}</button>
             </div>
           </div>
         </div>
