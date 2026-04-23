@@ -985,7 +985,7 @@ function ClinicTab({ isAdmin, userUnitId }: { isAdmin: boolean; userUnitId?: str
                   </div>
 
                   {/* Cards */}
-                  <div style={{ background: svcColor + '10', borderRadius: '0 0 14px 14px', border: `1.5px solid ${svcColor}30`, borderTop: 'none', minHeight: 120, padding: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ background: svcColor + '10', borderRadius: '0 0 14px 14px', border: `1.5px solid ${svcColor}30`, borderTop: 'none', minHeight: 80, padding: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {svcRows.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '16px 8px', color: '#aaa', fontSize: 12 }}>Nenhum agendamento</div>
                     ) : svcRows.map(a => (
