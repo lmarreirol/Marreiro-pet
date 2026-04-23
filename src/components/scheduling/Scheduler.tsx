@@ -9,6 +9,11 @@ const SERVICES = [
   { id: 'exames', name: 'Exames', sub: 'Laboratório e imagem', icon: 'pill' as const },
 ]
 
+const VET_SUB_SERVICES = [
+  { id: 'clinico-geral', name: 'Consulta Clínico Geral', price: 80, sub: 'R$ 80,00' },
+  { id: 'plantao', name: 'Consulta Plantão', price: 0, sub: 'Valor a combinar' },
+]
+
 const UNITS = [
   { id: 'caucaia', name: 'Caucaia', sub: 'Jurema', whatsapp: '5585991575287' },
   { id: 'pecem', name: 'Pecém', sub: 'São Gonçalo do Amarante', whatsapp: '5585981173322' },
@@ -48,6 +53,7 @@ type DateEntry = ReturnType<typeof getNextDates>[0]
 
 interface BookingState {
   service: string | null
+  vetSubService: string | null
   unit: string | null
   petType: string | null
   size: string | null
@@ -62,7 +68,7 @@ interface BookingState {
 }
 
 const initialState: BookingState = {
-  service: null, unit: null, petType: null, size: null, professional: null,
+  service: null, vetSubService: null, unit: null, petType: null, size: null, professional: null,
   date: null, time: null, tutorName: '', phone: '', cpf: '', petName: '', notes: '',
 }
 
@@ -123,8 +129,12 @@ export default function Scheduler() {
   }
 
   const canNext = () => {
-    if (step === 0) return data.service === 'banho' ? !!data.service : !!(data.service && data.unit)
-    if (step === 1) return data.petType && (data.service !== 'banho' || data.professional)
+    if (step === 0) {
+      if (data.service === 'banho') return !!data.service
+      if (data.service === 'vet') return !!(data.service && data.vetSubService && data.unit)
+      return !!(data.service && data.unit)
+    }
+    if (step === 1) return !!(data.petType && (data.service !== 'banho' || data.professional))
     if (step === 2) return data.date && data.time
     if (step === 3) return data.tutorName && data.phone && data.cpf && data.petName && validateCpf(data.cpf)
     return false
@@ -143,6 +153,7 @@ export default function Scheduler() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serviceType: data.service,
+          package: data.vetSubService ?? null,
           unitId: data.unit,
           professional: data.professional ?? null,
           petName: data.petName,
@@ -153,7 +164,7 @@ export default function Scheduler() {
           notes: data.notes || null,
           date: data.date?.date.toISOString(),
           time: data.time,
-          totalPrice: 0,
+          totalPrice: VET_SUB_SERVICES.find(s => s.id === data.vetSubService)?.price ?? 0,
           isVip: false,
         }),
       })
@@ -223,14 +234,29 @@ export default function Scheduler() {
         <>
           <div className="form-title">Qual serviço você precisa?</div>
           <div className="form-sub">Escolha o que vamos fazer pelo seu pet.</div>
-          <div className="tile-grid" style={{ marginBottom: 22 }}>
+          <div className="tile-grid" style={{ marginBottom: data.service === 'vet' ? 0 : 22 }}>
             {SERVICES.map(s => (
-              <button key={s.id} className={`tile ${data.service === s.id ? 'selected' : ''}`} onClick={() => update({ service: s.id })}>
+              <button key={s.id} className={`tile ${data.service === s.id ? 'selected' : ''}`} onClick={() => update({ service: s.id, vetSubService: null })}>
                 <div className="tile-icon"><Icon name={s.icon} size={20} /></div>
                 <div><div className="tile-title">{s.name}</div><div className="tile-sub">{s.sub}</div></div>
               </button>
             ))}
           </div>
+
+          {data.service === 'vet' && (
+            <div style={{ marginTop: 22, marginBottom: 22 }}>
+              <div className="form-title" style={{ fontSize: 16 }}>Tipo de consulta</div>
+              <div className="tile-grid" style={{ marginTop: 10 }}>
+                {VET_SUB_SERVICES.map(s => (
+                  <button key={s.id} className={`tile ${data.vetSubService === s.id ? 'selected' : ''}`} onClick={() => update({ vetSubService: s.id })}>
+                    <div className="tile-icon">🩺</div>
+                    <div><div className="tile-title">{s.name}</div><div className="tile-sub">{s.sub}</div></div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="form-title" style={{ fontSize: 16 }}>Em qual unidade?</div>
           <div className="tile-grid" style={{ marginTop: 10 }}>
             {UNITS.map(u => (
@@ -339,6 +365,7 @@ export default function Scheduler() {
           <div className="form-sub">Só precisamos disso para confirmar por WhatsApp.</div>
           <div className="summary-box">
             <div className="summary-row"><span className="k">Serviço</span><span className="v">{SERVICES.find(s => s.id === data.service)?.name}</span></div>
+            {data.vetSubService && <div className="summary-row"><span className="k">Tipo</span><span className="v">{VET_SUB_SERVICES.find(s => s.id === data.vetSubService)?.name}</span></div>}
             <div className="summary-row"><span className="k">Unidade</span><span className="v">Marreiro {UNITS.find(u => u.id === data.unit)?.name}</span></div>
             <div className="summary-row"><span className="k">Data & horário</span><span className="v">{data.date?.day}/{((data.date?.date.getMonth() ?? 0) + 1).toString().padStart(2, '0')} às {data.time}</span></div>
           </div>
