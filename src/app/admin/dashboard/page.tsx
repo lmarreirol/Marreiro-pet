@@ -673,21 +673,25 @@ export default function Dashboard() {
             {/* Agenda Calendar */}
             {loading ? (
               <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>Carregando agendamentos...</div>
-            ) : filteredAppointments.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 60, color: '#aaa', background: '#fff', borderRadius: 16 }}>
-                <div style={{ fontSize: 36, marginBottom: 12 }}>📅</div>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{search ? 'Nenhum resultado para esta busca' : 'Nenhum agendamento para este dia'}</div>
-              </div>
             ) : (() => {
               const SLOT_H = 76
               const TIME_W = 60
-              const PRO_NAME_MAP: Record<string, string> = { eduarda: 'Eduarda', victor: 'Victor', daniele: 'Daniele', any: 'Qualquer', jessica: 'Jessica', ana: 'Ana', carlos: 'Carlos' }
+              const PRO_NAME_MAP: Record<string, string> = {}
+              Object.values(PROFESSIONALS).flat().forEach(p => { PRO_NAME_MAP[p.id] = p.name })
               const slots: string[] = []
               for (let h = 7; h <= 19; h++) { slots.push(`${String(h).padStart(2,'0')}:00`); if (h < 19) slots.push(`${String(h).padStart(2,'0')}:30`) }
-              const pros: (string | null)[] = []
-              filteredAppointments.forEach(a => { const p = a.professional ?? null; if (!pros.includes(p)) pros.push(p) })
-              pros.sort((a, b) => (a ?? 'zzz').localeCompare(b ?? 'zzz'))
-              const visiblePros = pros.filter(p => p !== null)
+              const unitKey = isAdmin ? (unitFilter !== 'all' ? unitFilter : null) : (user?.unitId ?? null)
+              const basePros: string[] = unitKey
+                ? (PROFESSIONALS[unitKey] ?? []).map(p => p.id)
+                : Object.values(PROFESSIONALS).flat().map(p => p.id).filter((id, i, arr) => arr.indexOf(id) === i)
+              filteredAppointments.forEach(a => { if (a.professional && !basePros.includes(a.professional)) basePros.push(a.professional) })
+              const visiblePros = proFilter !== 'all' ? basePros.filter(p => p === proFilter) : basePros
+              if (search && filteredAppointments.length === 0) return (
+                <div style={{ textAlign: 'center', padding: 60, color: '#aaa', background: '#fff', borderRadius: 16 }}>
+                  <div style={{ fontSize: 36, marginBottom: 12 }}>🔍</div>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>Nenhum resultado para esta busca</div>
+                </div>
+              )
               const getAppts = (slot: string, pro: string | null) => filteredAppointments.filter(a => a.appointmentTime === slot && (a.professional ?? null) === pro)
               const activeSlots = slots.filter(slot => visiblePros.some(pro => getAppts(slot, pro).length > 0))
               const minSlot = activeSlots[0] ?? '08:00'
