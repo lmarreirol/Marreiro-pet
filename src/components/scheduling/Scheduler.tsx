@@ -11,8 +11,8 @@ const SERVICES = [
 
 const VACCINES: Record<string, { id: string; name: string; price: number; priceLabel: string }[]> = {
   dog: [
-    { id: 'v8v10-importada', name: 'Múltipla V8/V10 Importada', price: 90, priceLabel: 'R$ 90,00' },
-    { id: 'vanguard-v10',    name: 'Viral V10 Vanguard Plus',   price: 95, priceLabel: 'R$ 95,00' },
+    { id: 'v8v10-importada', name: 'Polivalente V8/V10 Importada',  price: 90, priceLabel: 'R$ 90,00' },
+    { id: 'vanguard-v10',    name: 'Polivalente V10 Vanguard Plus', price: 95, priceLabel: 'R$ 95,00' },
     { id: 'antirabica-cao',  name: 'Antirábica (raiva)',         price: 60, priceLabel: 'R$ 60,00' },
     { id: 'tosse-canis',     name: 'Vacina Tosse dos Canis',     price: 0,  priceLabel: 'A consultar' },
     { id: 'anti-giardia',    name: 'Anti-Giárdia',               price: 90, priceLabel: 'R$ 90,00' },
