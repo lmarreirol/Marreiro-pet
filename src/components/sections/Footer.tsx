@@ -52,6 +52,12 @@ export default function Footer() {
           <span>© 2026 Marreiro Pet · Todos os direitos reservados</span>
           <span>CNPJ 43.457.292/0001-07</span>
         </div>
+        <div className="footer-tarly">
+          <span>Desenvolvido por</span>
+          <a href="https://tarly.com.br" target="_blank" rel="noopener noreferrer" aria-label="Tarly">
+            <Image src="/tarly-logo.png" alt="Tarly" width={72} height={24} style={{ objectFit: 'contain' }} />
+          </a>
+        </div>
       </div>
     </footer>
   )
