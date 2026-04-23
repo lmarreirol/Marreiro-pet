@@ -45,6 +45,7 @@ export interface BookingData {
   petName: string
   petBreed: string
   tutorName: string
+  tutorCpf?: string
   phone: string
   email: string
   date: Date | null

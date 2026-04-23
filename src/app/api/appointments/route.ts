@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const {
       serviceType, package: pkg, addons, unitId, professional,
-      petName, petBreed, petSize, tutorName, phone, email,
+      petName, petBreed, petSize, tutorName, tutorCpf, phone, email,
       date, time, notes, totalPrice, isVip,
     } = body
 
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
         petBreed: petBreed ?? null,
         petSize: petSize ?? null,
         tutorName,
+        tutorCpf: tutorCpf ?? null,
         phone,
         email: email ?? null,
         appointmentDate,

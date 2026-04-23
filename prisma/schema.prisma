@@ -8,37 +8,38 @@ datasource db {
 }
 
 model Appointment {
-  id              String            @id @default(cuid())
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  serviceType     String            // "grooming" | "vet"
+  serviceType String // "grooming" | "vet"
 
-  package         String?           // "banho" | "banho-tosa" | "spa"
-  addons          String[]
+  package String? // "banho" | "banho-tosa" | "spa"
+  addons  String[]
 
-  unitId          String
-  professional    String?
+  unitId       String
+  professional String?
 
-  petName         String
-  petBreed        String?
-  petSize         String?           // "small" | "medium" | "large"
+  petName  String
+  petBreed String?
+  petSize  String? // "small" | "medium" | "large"
 
-  tutorName       String
-  phone           String
-  email           String?
+  tutorName String
+  tutorCpf  String?
+  phone     String
+  email     String?
 
   appointmentDate DateTime
   appointmentTime String
 
-  paymentId       String?           // ID da preferência Mercado Pago
-  paymentStatus   PaymentStatus     @default(PENDING)
-  totalPrice      Decimal           @db.Decimal(10, 2)
+  paymentId     String? // ID da preferência Mercado Pago
+  paymentStatus PaymentStatus @default(PENDING)
+  totalPrice    Decimal       @db.Decimal(10, 2)
 
-  status          AppointmentStatus @default(AWAITING_PAYMENT)
+  status AppointmentStatus @default(AWAITING_PAYMENT)
 
-  notes           String?
-  isVip           Boolean           @default(false)
+  notes String?
+  isVip Boolean @default(false)
 
   @@index([unitId])
   @@index([status])
@@ -78,11 +79,11 @@ enum UserRole {
 model AdoptionPet {
   id          String   @id @default(cuid())
   name        String
-  species     String   // "cachorro" | "gato"
+  species     String // "cachorro" | "gato"
   breed       String?
   age         String?
-  gender      String   // "macho" | "femea"
-  size        String?  // "pequeno" | "medio" | "grande"
+  gender      String // "macho" | "femea"
+  size        String? // "pequeno" | "medio" | "grande"
   description String?
   imageUrl    String?
   available   Boolean  @default(true)
@@ -92,18 +93,18 @@ model AdoptionPet {
 }
 
 model BlogPost {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  title       String
-  tag         String
-  excerpt     String
-  content     String
-  coverColor  String   @default("orange")
-  imageUrl    String?
-  readTime    String   @default("5 min")
-  published   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  title      String
+  tag        String
+  excerpt    String
+  content    String
+  coverColor String   @default("orange")
+  imageUrl   String?
+  readTime   String   @default("5 min")
+  published  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([published])
 }

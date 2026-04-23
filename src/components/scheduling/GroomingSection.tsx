@@ -281,6 +281,7 @@ export default function GroomingSection() {
           petBreed: data.petBreed,
           petSize: data.size,
           tutorName: data.tutorName,
+          tutorCpf: data.cpf || null,
           phone: data.phone,
           notes: data.notes,
           date: data.date?.date.toISOString(),
