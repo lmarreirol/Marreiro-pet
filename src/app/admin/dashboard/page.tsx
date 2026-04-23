@@ -963,80 +963,67 @@ function ClinicTab({ isAdmin, userUnitId }: { isAdmin: boolean; userUnitId?: str
         )}
       </div>
 
-      {/* Coluna direita: timeline */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Colunas por serviço */}
+      <div style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 60, color: '#888' }}>Carregando...</div>
-        ) : rows.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#888', background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🐾</div>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Nenhum agendamento clínico</div>
-            <div style={{ fontSize: 13, color: '#aaa' }}>para {dateLabel.toLowerCase()}</div>
-          </div>
         ) : (
-          <div style={{ position: 'relative' }}>
-            {/* Linha vertical da timeline */}
-            <div style={{ position: 'absolute', left: 52, top: 0, bottom: 0, width: 2, background: '#e5e7eb', zIndex: 0 }} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {rows.map(a => {
-                const svcColor = SVCCOLORS[a.serviceType ?? ''] ?? '#004A99'
-                const svcIcon = SVCICONS[a.serviceType ?? ''] ?? '📋'
-                return (
-                  <div key={a.id} style={{ display: 'flex', gap: 16, alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
-                    {/* Horário + bolinha */}
-                    <div style={{ width: 52, flexShrink: 0, textAlign: 'right', paddingTop: 18 }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: '#004A99', lineHeight: 1 }}>{a.appointmentTime}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(260px, 1fr))', gap: 16, minWidth: 780 }}>
+            {Object.entries(CLINIC_SERVICE_LABELS).map(([svcKey, svcLabel]) => {
+              const svcColor = SVCCOLORS[svcKey] ?? '#004A99'
+              const svcIcon = SVCICONS[svcKey] ?? '📋'
+              const svcRows = rows.filter(a => a.serviceType === svcKey).sort((a, b) => a.appointmentTime.localeCompare(b.appointmentTime))
+              return (
+                <div key={svcKey}>
+                  {/* Cabeçalho da coluna */}
+                  <div style={{ background: svcColor, borderRadius: '14px 14px 0 0', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>{svcIcon}</span>
+                      <span style={{ fontWeight: 800, fontSize: 14, color: '#fff' }}>{svcLabel}</span>
                     </div>
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: STATUS_COLORS[a.status], border: '3px solid #fff', boxShadow: '0 0 0 2px ' + STATUS_COLORS[a.status], flexShrink: 0, marginTop: 20, zIndex: 2 }} />
+                    <span style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', fontWeight: 900, fontSize: 13, padding: '2px 10px', borderRadius: 20 }}>{svcRows.length}</span>
+                  </div>
 
-                    {/* Card */}
-                    <div style={{ flex: 1, background: '#fff', borderRadius: 14, padding: '16px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: `4px solid ${svcColor}` }}>
-                      {/* Linha topo: serviço + status + unidade */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: svcColor + '18', color: svcColor }}>
-                          {svcIcon} {CLINIC_SERVICE_LABELS[a.serviceType ?? ''] ?? a.serviceType}
-                        </span>
-                        <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: STATUS_COLORS[a.status] + '18', color: STATUS_COLORS[a.status] }}>
-                          {STATUS_LABELS[a.status]}
-                        </span>
-                        {isAdmin && a.unitId && (
-                          <span style={{ fontSize: 11, color: '#999', marginLeft: 'auto' }}>
-                            📍 {UNITS.find(u => u.id === a.unitId)?.name ?? a.unitId}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Pet + tutor */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                        <div>
-                          <div style={{ fontWeight: 900, fontSize: 17, color: '#0F1B2D', marginBottom: 2 }}>{a.petName}</div>
-                          <div style={{ fontSize: 13, color: '#666' }}>👤 {a.tutorName}</div>
-                          {a.petBreed && <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>{a.petBreed}</div>}
-                          {a.notes && <div style={{ fontSize: 12, color: '#888', marginTop: 6, fontStyle: 'italic', background: '#fafafa', borderRadius: 6, padding: '4px 8px' }}>"{a.notes}"</div>}
+                  {/* Cards */}
+                  <div style={{ background: svcColor + '10', borderRadius: '0 0 14px 14px', border: `1.5px solid ${svcColor}30`, borderTop: 'none', minHeight: 120, padding: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {svcRows.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '24px 8px', color: '#aaa', fontSize: 13 }}>Nenhum agendamento</div>
+                    ) : svcRows.map(a => (
+                      <div key={a.id} style={{ background: '#fff', borderRadius: 12, padding: '12px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.07)', borderLeft: `3px solid ${STATUS_COLORS[a.status]}` }}>
+                        {/* Horário + status */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontSize: 15, fontWeight: 900, color: svcColor }}>{a.appointmentTime}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: STATUS_COLORS[a.status] + '20', color: STATUS_COLORS[a.status] }}>{STATUS_LABELS[a.status]}</span>
                         </div>
 
-                        {/* WhatsApp */}
-                        <a href={`https://wa.me/55${a.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
-                          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, fontSize: 11, color: '#25D366', fontWeight: 700, textDecoration: 'none', background: '#f0fdf4', padding: '8px 12px', borderRadius: 10, flexShrink: 0 }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
-                          {a.phone}
-                        </a>
-                      </div>
+                        {/* Pet + tutor */}
+                        <div style={{ fontWeight: 800, fontSize: 14, color: '#0F1B2D', marginBottom: 2 }}>{a.petName}</div>
+                        <div style={{ fontSize: 12, color: '#666', marginBottom: a.notes ? 6 : 0 }}>👤 {a.tutorName}</div>
+                        {isAdmin && a.unitId && <div style={{ fontSize: 11, color: '#aaa', marginBottom: 4 }}>📍 {UNITS.find(u => u.id === a.unitId)?.name ?? a.unitId}</div>}
+                        {a.notes && <div style={{ fontSize: 11, color: '#888', fontStyle: 'italic', background: '#f8fafc', borderRadius: 6, padding: '4px 8px', marginBottom: 6 }}>"{a.notes}"</div>}
 
-                      {/* Ações de status */}
-                      <div style={{ display: 'flex', gap: 6, marginTop: 12, paddingTop: 12, borderTop: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
-                        {(['CONFIRMED', 'COMPLETED', 'CANCELLED'] as const).map(s => (
-                          <button key={s} onClick={() => updateStatus(a.id, s)}
-                            style={{ padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: a.status === s ? 'default' : 'pointer', border: `1.5px solid ${a.status === s ? STATUS_COLORS[s] : '#e5e7eb'}`, background: a.status === s ? STATUS_COLORS[s] : '#f8fafc', color: a.status === s ? '#fff' : '#666', transition: 'all 0.15s' }}>
-                            {STATUS_LABELS[s]}
-                          </button>
-                        ))}
+                        {/* Rodapé: WA + status */}
+                        <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 8, borderTop: '1px solid #f1f5f9', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <a href={`https://wa.me/55${a.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+                            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#25D366', fontWeight: 700, textDecoration: 'none', background: '#f0fdf4', padding: '4px 8px', borderRadius: 6 }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+                            {a.phone}
+                          </a>
+                          <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
+                            {(['CONFIRMED', 'COMPLETED', 'CANCELLED'] as const).map(s => (
+                              <button key={s} onClick={() => updateStatus(a.id, s)} title={STATUS_LABELS[s]}
+                                style={{ width: 24, height: 24, borderRadius: 6, border: `1.5px solid ${a.status === s ? STATUS_COLORS[s] : '#e5e7eb'}`, background: a.status === s ? STATUS_COLORS[s] : '#f8fafc', cursor: a.status === s ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>
+                                {s === 'CONFIRMED' ? '✓' : s === 'COMPLETED' ? '★' : '✕'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                )
-              })}
-            </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
