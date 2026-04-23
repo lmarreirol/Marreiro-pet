@@ -172,8 +172,8 @@ function SucessoContent() {
           </button>
         )}
 
-        <Link data-html2canvas-ignore href="/" style={{ display: 'block', color: '#888', fontSize: 13, textDecoration: 'none' }}>
-          Voltar para o site
+        <Link data-html2canvas-ignore href="/" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '14px', borderRadius: 12, background: '#f0f4f8', color: '#004A99', fontWeight: 800, fontSize: 15, textDecoration: 'none', boxSizing: 'border-box' }}>
+          🐾 Fazer outro agendamento
         </Link>
       </div>
     </div>
