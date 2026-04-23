@@ -3,10 +3,10 @@ import { useState } from 'react'
 import Icon from '@/components/ui/Icon'
 
 const FAQS = [
-  { q: 'Vocês atendem emergências 24h?', a: 'Sim! A unidade de Caucaia conta com plantão veterinário 24 horas, todos os dias. Para as demais unidades, atendemos até às 21h e direcionamos emergências para a matriz.' },
+  { q: 'Vocês atendem emergências 24h?', a: 'Sim! A unidade de Caucaia conta com plantão veterinário 24 horas, todos os dias. Para as demais unidades, atendemos até às 18h e direcionamos emergências para a matriz.' },
   { q: 'Quais formas de pagamento aceitam?', a: 'Aceitamos dinheiro, PIX, cartões de crédito e débito (todas as bandeiras), e parcelamos em até 6x sem juros em consultas e procedimentos.' },
   { q: 'É necessário agendar com antecedência?', a: 'Recomendamos agendar com pelo menos 24h de antecedência, especialmente para banho e tosa. Consultas de urgência são encaixadas no mesmo dia conforme disponibilidade.' },
-  { q: 'Como funciona a entrega de ração?', a: 'Fazemos entrega em Caucaia, Pecém, São Gonçalo e Taíba. Pedidos acima de R$ 150 têm frete grátis. Entregamos no mesmo dia para pedidos até 14h.' },
+  { q: 'Como funciona a entrega de ração?', a: 'Fazemos entrega em Caucaia, Pecém, São Gonçalo e Taíba. Pedidos acima de R$ 50 têm frete grátis. Entregamos no mesmo dia para pedidos até 14h.' },
 ]
 
 export default function Contact() {
@@ -22,19 +22,19 @@ export default function Contact() {
           <div>
             <div className="contact-item">
               <div className="contact-item-icon"><Icon name="wa" size={22} /></div>
-              <div><strong>WhatsApp central</strong><span>(85) 9 9999-9999 — seg à sáb, 8h às 21h</span></div>
+              <div><strong>SAC Marreiro</strong><span>(85) 92183-6547 — seg a sáb, 8h às 18h</span></div>
             </div>
             <div className="contact-item">
               <div className="contact-item-icon"><Icon name="phone" size={22} /></div>
-              <div><strong>Plantão 24h</strong><span>(85) 9 9999-0001 — unidade Caucaia</span></div>
+              <div><strong>Plantão 24h</strong><span>(85) 99157-5287 — Marreiro Clínica Vet 24h</span></div>
             </div>
             <div className="contact-item">
               <div className="contact-item-icon"><Icon name="mail" size={22} /></div>
-              <div><strong>E-mail</strong><span>contato@marreiropet.com.br</span></div>
+              <div><strong>E-mail</strong><span>petshopmarreiro@gmail.com</span></div>
             </div>
             <div className="contact-item">
               <div className="contact-item-icon"><Icon name="clock" size={22} /></div>
-              <div><strong>Horário de atendimento</strong><span>Seg a Sáb: 8h às 21h · Dom: 8h às 13h</span></div>
+              <div><strong>Horário de atendimento</strong><span>Seg a Sáb: 8h às 18h · Clínica Vet: 24 horas</span></div>
             </div>
           </div>
           <div>

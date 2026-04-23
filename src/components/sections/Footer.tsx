@@ -11,11 +11,11 @@ export default function Footer() {
               <Image src="/marreiro-logo.png" alt="Marreiro Pet" width={48} height={48} style={{ filter: 'brightness(1.1)' }} />
               <span className="footer-logo-text">MARREIRO<span className="pet"> PET</span></span>
             </div>
-            <p>Clínica veterinária e pet shop com atendimento humanizado. Cuidando de cães e gatos no Ceará há mais de 15 anos.</p>
+            <p>Clínica veterinária e pet shop com atendimento humanizado. Cuidando de cães e gatos no Ceará há mais de 8 anos.</p>
             <div className="footer-social">
-              <a href="#" aria-label="Instagram"><Icon name="ig" size={18} /></a>
-              <a href="#" aria-label="Facebook"><Icon name="fb" size={18} /></a>
-              <a href="#" aria-label="WhatsApp"><Icon name="wa" size={18} /></a>
+              <a href="https://www.instagram.com/marreiropet/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="ig" size={18} /></a>
+              <a href="https://www.facebook.com/marreiropet/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="fb" size={18} /></a>
+              <a href="https://wa.me/5585991575287" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="wa" size={18} /></a>
             </div>
           </div>
           <div>
@@ -41,15 +41,16 @@ export default function Footer() {
           <div>
             <h4>Contato</h4>
             <ul>
-              <li><a href="tel:+5585888888888">(85) 8 8888-8888</a></li>
-              <li><a href="mailto:contato@marreiropet.com.br">contato@marreiropet.com.br</a></li>
+              <li><a href="tel:+558592183654">(85) 92183-6547 — SAC</a></li>
+              <li><a href="tel:+5585991575287">(85) 99157-5287 — Plantão 24h</a></li>
+              <li><a href="mailto:petshopmarreiro@gmail.com">petshopmarreiro@gmail.com</a></li>
               <li>Caucaia · Pecém · S. Gonçalo · Taíba</li>
             </ul>
           </div>
         </div>
         <div className="footer-bottom">
           <span>© 2026 Marreiro Pet · Todos os direitos reservados</span>
-          <span>CNPJ 00.000.000/0001-00</span>
+          <span>CNPJ 43.457.292/0001-07</span>
         </div>
       </div>
     </footer>

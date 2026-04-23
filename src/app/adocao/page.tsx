@@ -131,7 +131,7 @@ export default function AdocaoPage() {
               {filtered.map(pet => (
                 <div key={pet.id} style={{ background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column' }}>
                   {/* Foto */}
-                  <div style={{ position: 'relative', height: 220, background: '#f0f4f8' }}>
+                  <div onClick={() => setLightbox(pet)} style={{ position: 'relative', height: 220, background: '#f0f4f8', cursor: 'zoom-in' }}>
                     {pet.imageUrl ? (
                       <Image src={pet.imageUrl} alt={pet.name} fill style={{ objectFit: 'cover' }} />
                     ) : (
