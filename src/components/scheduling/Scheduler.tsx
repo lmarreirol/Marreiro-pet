@@ -11,7 +11,7 @@ const SERVICES = [
 
 const VET_SUB_SERVICES = [
   { id: 'clinico-geral', name: 'Consulta Clínico Geral', price: 80, priceLabel: 'R$ 80,00', info: '' },
-  { id: 'plantao', name: 'Consulta Plantão', price: 120, priceLabel: 'R$ 120,00', info: '19h–07h e feriados' },
+  { id: 'plantao', name: 'Consulta Plantão', price: 120, priceLabel: 'R$ 120,00', info: '19h–07h · Domingos e feriados' },
 ]
 
 const UNITS = [
