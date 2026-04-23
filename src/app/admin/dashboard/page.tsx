@@ -74,6 +74,8 @@ export default function Dashboard() {
   const [proFilter, setProFilter] = useState<string>('all')
   const [tab, setTab] = useState<'appointments' | 'clinic' | 'availability' | 'report' | 'adoption' | 'blog'>('appointments')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [search, setSearch] = useState('')
+  const [monthCounts, setMonthCounts] = useState<Record<string, number>>({})
   const [bookingSlot, setBookingSlot] = useState<{ slot: string; pro: string | null } | null>(null)
   const [bookingForm, setBookingForm] = useState({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [] as string[], notes: '', isVip: false })
 
@@ -113,7 +115,25 @@ export default function Dashboard() {
       .catch(() => setLoading(false))
   }, [date, unitFilter, proFilter, status, refreshKey])
 
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    const params = new URLSearchParams({ role: user?.role ?? '', userUnitId: user?.unitId ?? '', serviceTypes: 'grooming' })
+    if (isAdmin && unitFilter !== 'all') params.set('unitId', unitFilter)
+    fetch(`/api/admin/appointments?${params}`)
+      .then(r => r.json())
+      .then(d => {
+        const counts: Record<string, number> = {}
+        for (const a of (d.appointments ?? [])) {
+          const day = (a.appointmentDate as string)?.split('T')[0]
+          if (day) counts[day] = (counts[day] ?? 0) + 1
+        }
+        setMonthCounts(counts)
+      })
+      .catch(() => {})
+  }, [calMonth, unitFilter, status])
+
   const updateStatus = async (id: string, newStatus: string) => {
+    if (newStatus === 'CANCELLED' && !window.confirm('Tem certeza que deseja cancelar este agendamento?')) return
     await fetch(`/api/admin/appointments/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -448,9 +468,12 @@ export default function Dashboard() {
                             style={{ aspectRatio: '1', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: isSelected || isToday ? 800 : 400,
                               background: isSelected ? '#004A99' : isToday ? '#e0eaff' : 'transparent',
                               color: isSelected ? '#fff' : isToday ? '#004A99' : '#333',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
                             }}>
                             {day}
+                            {monthCounts[iso] > 0 && (
+                              <span style={{ width: 5, height: 5, borderRadius: '50%', background: isSelected ? 'rgba(255,255,255,0.7)' : '#EF7720', display: 'block', flexShrink: 0 }} />
+                            )}
                           </button>
                         )
                       })}
@@ -503,16 +526,31 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* Busca */}
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 15, color: '#bbb', pointerEvents: 'none' }}>🔍</span>
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Buscar por pet, tutor ou telefone..."
+                    style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, background: '#fff', boxSizing: 'border-box' }}
+                  />
+                  {search && (
+                    <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: 18, color: '#bbb', cursor: 'pointer', lineHeight: 1 }}>×</button>
+                  )}
+                </div>
+
               {/* ── Agenda ── */}
               <div>
 
             {/* Agenda Calendar */}
-            {loading ? (
+            {(() => { const filteredAppointments = search ? appointments.filter(a => a.petName.toLowerCase().includes(search.toLowerCase()) || a.tutorName.toLowerCase().includes(search.toLowerCase()) || a.phone.includes(search)) : appointments; return (
+            loading ? (
               <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>Carregando agendamentos...</div>
-            ) : appointments.length === 0 ? (
+            ) : filteredAppointments.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 60, color: '#aaa', background: '#fff', borderRadius: 16 }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>📅</div>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>Nenhum agendamento para este dia</div>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{search ? 'Nenhum resultado para esta busca' : 'Nenhum agendamento para este dia'}</div>
               </div>
             ) : (() => {
               const SLOT_H = 76
@@ -521,9 +559,9 @@ export default function Dashboard() {
               const slots: string[] = []
               for (let h = 7; h <= 19; h++) { slots.push(`${String(h).padStart(2,'0')}:00`); if (h < 19) slots.push(`${String(h).padStart(2,'0')}:30`) }
               const pros: (string | null)[] = []
-              appointments.forEach(a => { const p = a.professional ?? null; if (!pros.includes(p)) pros.push(p) })
+              filteredAppointments.forEach(a => { const p = a.professional ?? null; if (!pros.includes(p)) pros.push(p) })
               pros.sort((a, b) => (a ?? 'zzz').localeCompare(b ?? 'zzz'))
-              const getAppts = (slot: string, pro: string | null) => appointments.filter(a => a.appointmentTime === slot && (a.professional ?? null) === pro)
+              const getAppts = (slot: string, pro: string | null) => filteredAppointments.filter(a => a.appointmentTime === slot && (a.professional ?? null) === pro)
               const activeSlots = slots.filter(slot => pros.some(pro => getAppts(slot, pro).length > 0))
               const minSlot = activeSlots[0] ?? '08:00'
               const maxSlot = activeSlots[activeSlots.length - 1] ?? '18:00'
@@ -544,7 +582,7 @@ export default function Dashboard() {
                           </div>
                           <div>
                             <div style={{ fontWeight: 800, fontSize: 14, color: '#0F1B2D' }}>{PRO_NAME_MAP[pro ?? ''] ?? pro ?? 'Sem Preferência'}</div>
-                            <div style={{ fontSize: 11, color: '#aaa' }}>{appointments.filter(a => (a.professional ?? null) === pro).length} agend.</div>
+                            <div style={{ fontSize: 11, color: '#aaa' }}>{filteredAppointments.filter(a => (a.professional ?? null) === pro).length} agend.</div>
                           </div>
                         </div>
                       </div>
@@ -617,7 +655,8 @@ export default function Dashboard() {
                   </div>{/* fim minWidth wrapper */}
                 </div>
               )
-            })()}
+            })()
+            )})()}
               </div>{/* fim agenda wrapper */}
               </div>{/* fim coluna direita */}
             </div>{/* fim flex row */}
