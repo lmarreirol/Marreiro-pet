@@ -95,6 +95,22 @@ export default function Dashboard() {
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null)
   const [editForm, setEditForm] = useState({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [] as string[], notes: '', isVip: false, status: 'CONFIRMED' })
   const [editSaving, setEditSaving] = useState(false)
+  const [reschedulingAppt, setReschedulingAppt] = useState<Appointment | null>(null)
+  const [rescheduleForm, setRescheduleForm] = useState({ date: '', time: '' })
+  const [rescheduleSaving, setRescheduleSaving] = useState(false)
+
+  const saveReschedule = async () => {
+    if (!reschedulingAppt || !rescheduleForm.date || !rescheduleForm.time) return
+    setRescheduleSaving(true)
+    await fetch(`/api/admin/appointments/${reschedulingAppt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appointmentDate: new Date(`${rescheduleForm.date}T${rescheduleForm.time}:00`).toISOString(), appointmentTime: rescheduleForm.time }),
+    })
+    setRescheduleSaving(false)
+    setReschedulingAppt(null)
+    setRefreshKey(k => k + 1)
+  }
 
   const user = session?.user as any
   const isAdmin = user?.role === 'ADMIN'
@@ -414,6 +430,46 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      {/* Modal remarcar */}
+      {reschedulingAppt && (
+        <div onClick={() => setReschedulingAppt(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, padding: 28, width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: 18, color: '#0F1B2D' }}>Remarcar agendamento</div>
+                <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>{reschedulingAppt.petName} · {reschedulingAppt.tutorName}</div>
+              </div>
+              <button onClick={() => setReschedulingAppt(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#aaa' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={labelStyle}>Nova data</label>
+                <input type="date" value={rescheduleForm.date} onChange={e => setRescheduleForm(f => ({ ...f, date: e.target.value }))} style={inputStyle} min={new Date().toISOString().split('T')[0]} />
+              </div>
+              <div>
+                <label style={labelStyle}>Novo horário</label>
+                <select value={rescheduleForm.time} onChange={e => setRescheduleForm(f => ({ ...f, time: e.target.value }))} style={inputStyle}>
+                  <option value="">Selecione o horário</option>
+                  {ALL_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              {rescheduleForm.date && rescheduleForm.time && (
+                <div style={{ background: '#f0f6ff', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#004A99', fontWeight: 700 }}>
+                  📅 {new Date(`${rescheduleForm.date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })} às {rescheduleForm.time}
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button onClick={saveReschedule} disabled={!rescheduleForm.date || !rescheduleForm.time || rescheduleSaving}
+                style={{ flex: 1, padding: '13px', borderRadius: 12, background: '#004A99', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer', border: 'none', opacity: (!rescheduleForm.date || !rescheduleForm.time) ? 0.5 : 1 }}>
+                {rescheduleSaving ? 'Salvando...' : 'Confirmar remarcação'}
+              </button>
+              <button onClick={() => setReschedulingAppt(null)} style={{ padding: '13px 18px', borderRadius: 12, background: '#f0f4f8', color: '#555', fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none' }}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ background: '#004A99', color: '#fff', padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -655,6 +711,9 @@ export default function Dashboard() {
                                         </button>
                                       ))}
                                     </div>
+                                    <button onClick={e => { e.stopPropagation(); setReschedulingAppt(a); setRescheduleForm({ date: a.appointmentDate.split('T')[0], time: a.appointmentTime }) }} style={{ width: '100%', marginTop: 2, padding: '4px', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer', border: '1px solid #6366f1', background: 'transparent', color: '#6366f1' }}>
+                                      📅 Remarcar
+                                    </button>
                                   </div>
                                 ))}
                               </div>
