@@ -579,10 +579,12 @@ export default function Dashboard() {
               const gridMinW = TIME_W + pros.length * COL_MIN_W
               return (
                 <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
-                  <div style={{ overflowX: 'auto' }}>
-                  {/* Header */}
-                  <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#f8fafc', position: 'sticky', top: 0, zIndex: 10, minWidth: gridMinW }}>
-                    <div style={{ width: TIME_W, flexShrink: 0, borderRight: '1px solid #e5e7eb' }} />
+                  {/* Único container com scroll horizontal + vertical */}
+                  <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 580 }}>
+                  <div style={{ minWidth: gridMinW }}>
+                  {/* Header — sticky no topo, rola horizontalmente com o conteúdo */}
+                  <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#f8fafc', position: 'sticky', top: 0, zIndex: 10 }}>
+                    <div style={{ width: TIME_W, flexShrink: 0, borderRight: '1px solid #e5e7eb', position: 'sticky', left: 0, background: '#f8fafc', zIndex: 11 }} />
                     {pros.map((pro, pi) => (
                       <div key={pi} style={{ flex: 1, minWidth: COL_MIN_W, padding: '14px 16px', borderRight: pi < pros.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -598,13 +600,13 @@ export default function Dashboard() {
                     ))}
                   </div>
                   {/* Grid */}
-                  <div style={{ overflowY: 'auto', maxHeight: 520 }}>
                     {visibleSlots.map((slot) => {
                       const isHour = slot.endsWith(':00')
                       const hasAny = pros.some(pro => getAppts(slot, pro).length > 0)
                       return (
-                        <div key={slot} style={{ display: 'flex', borderBottom: `1px solid ${isHour ? '#e5e7eb' : '#f3f4f6'}`, minHeight: SLOT_H, minWidth: gridMinW, background: !hasAny ? (isHour ? '#fafafa' : '#fdfdfd') : '#fff' }}>
-                          <div style={{ width: TIME_W, flexShrink: 0, borderRight: '1px solid #e5e7eb', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 10, fontSize: isHour ? 13 : 11, fontWeight: isHour ? 700 : 400, color: isHour ? '#444' : '#ccc' }}>
+                        <div key={slot} style={{ display: 'flex', borderBottom: `1px solid ${isHour ? '#e5e7eb' : '#f3f4f6'}`, minHeight: SLOT_H, background: !hasAny ? (isHour ? '#fafafa' : '#fdfdfd') : '#fff' }}>
+                          {/* Coluna de horário — sticky à esquerda */}
+                          <div style={{ width: TIME_W, flexShrink: 0, borderRight: '1px solid #e5e7eb', position: 'sticky', left: 0, background: !hasAny ? (isHour ? '#fafafa' : '#fdfdfd') : '#fff', zIndex: 5, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 10, fontSize: isHour ? 13 : 11, fontWeight: isHour ? 700 : 400, color: isHour ? '#444' : '#ccc' }}>
                             {slot}
                           </div>
                           {pros.map((pro, pi) => {
@@ -660,8 +662,8 @@ export default function Dashboard() {
                         </div>
                       )
                     })}
-                  </div>
-                  </div>{/* fim overflowX wrapper */}
+                  </div>{/* fim minWidth wrapper */}
+                  </div>{/* fim overflowX+Y wrapper */}
                 </div>
               )
             })()}
