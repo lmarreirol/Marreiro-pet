@@ -211,6 +211,14 @@ export default function Dashboard() {
     setRefreshKey(k => k + 1)
   }
 
+  const filteredAppointments = search
+    ? appointments.filter(a =>
+        a.petName.toLowerCase().includes(search.toLowerCase()) ||
+        a.tutorName.toLowerCase().includes(search.toLowerCase()) ||
+        a.phone.includes(search)
+      )
+    : appointments
+
   if (status === 'loading') return <div style={{ padding: 40, textAlign: 'center' }}>Carregando...</div>
 
   return (
@@ -544,8 +552,7 @@ export default function Dashboard() {
               <div>
 
             {/* Agenda Calendar */}
-            {(() => { const filteredAppointments = search ? appointments.filter(a => a.petName.toLowerCase().includes(search.toLowerCase()) || a.tutorName.toLowerCase().includes(search.toLowerCase()) || a.phone.includes(search)) : appointments; return (
-            loading ? (
+            {loading ? (
               <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>Carregando agendamentos...</div>
             ) : filteredAppointments.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 60, color: '#aaa', background: '#fff', borderRadius: 16 }}>
@@ -655,8 +662,7 @@ export default function Dashboard() {
                   </div>{/* fim minWidth wrapper */}
                 </div>
               )
-            })()
-            )})()}
+            })()}
               </div>{/* fim agenda wrapper */}
               </div>{/* fim coluna direita */}
             </div>{/* fim flex row */}
