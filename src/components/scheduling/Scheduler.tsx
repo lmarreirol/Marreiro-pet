@@ -11,11 +11,16 @@ const SERVICES = [
 
 const VACCINES: Record<string, { id: string; name: string; price: number; priceLabel: string; diseases?: string[] }[]> = {
   dog: [
-    { id: 'v8v10-importada', name: 'Polivalente V8/V10 Importada',  price: 90, priceLabel: 'R$ 90,00' },
-    { id: 'vanguard-v10',    name: 'Polivalente V10 Vanguard Plus', price: 95, priceLabel: 'R$ 95,00' },
-    { id: 'antirabica-cao',  name: 'Antirábica (raiva)',            price: 60, priceLabel: 'R$ 60,00' },
-    { id: 'tosse-canis',     name: 'Vacina Tosse dos Canis',        price: 0,  priceLabel: 'A consultar' },
-    { id: 'anti-giardia',    name: 'Anti-Giárdia',                  price: 90, priceLabel: 'R$ 90,00' },
+    { id: 'v8v10-importada', name: 'Polivalente V8/V10 Importada',  price: 90, priceLabel: 'R$ 90,00',
+      diseases: ['Cinomose', 'Parvovirose', 'Hepatite', 'Adenovirose', 'Parainfluenza', 'Coronavirose', 'Leptospirose'] },
+    { id: 'vanguard-v10',    name: 'Polivalente V10 Vanguard Plus', price: 95, priceLabel: 'R$ 95,00',
+      diseases: ['Cinomose', 'Parvovirose', 'Hepatite', 'Adenovirose', 'Parainfluenza', 'Leptospirose (10 sorovares)'] },
+    { id: 'antirabica-cao',  name: 'Antirábica (raiva)',            price: 60, priceLabel: 'R$ 60,00',
+      diseases: ['Raiva'] },
+    { id: 'tosse-canis',     name: 'Vacina Tosse dos Canis',        price: 0,  priceLabel: 'A consultar',
+      diseases: ['Bordetella', 'Parainfluenza'] },
+    { id: 'anti-giardia',    name: 'Anti-Giárdia',                  price: 90, priceLabel: 'R$ 90,00',
+      diseases: ['Giardíase'] },
   ],
   cat: [
     { id: 'antirabica-gato', name: 'Antirábica (raiva)', price: 60,  priceLabel: 'R$ 60,00',
