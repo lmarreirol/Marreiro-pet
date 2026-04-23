@@ -77,7 +77,7 @@ export default function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [search, setSearch] = useState('')
   const [monthCounts, setMonthCounts] = useState<Record<string, number>>({})
-  const [bookingSlot, setBookingSlot] = useState<{ slot: string; pro: string | null } | null>(null)
+  const [bookingSlot, setBookingSlot] = useState<{ slot: string; pro: string | null; unitId: string } | null>(null)
   const [bookingForm, setBookingForm] = useState({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [] as string[], notes: '', isVip: false })
 
   const PKG_PRICES: Record<string, Record<string, number>> = {
@@ -166,35 +166,40 @@ export default function Dashboard() {
   const createManualBooking = async () => {
     if (!bookingSlot || !bookingForm.petName || !bookingForm.tutorName) return
     setBookingSaving(true)
-    const unitId = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia')
-    const res = await fetch('/api/appointments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        serviceType: 'grooming',
-        package: bookingForm.pkg,
-        addons: bookingForm.addons,
-        unitId,
-        professional: bookingSlot.pro,
-        petName: bookingForm.petName,
-        petBreed: bookingForm.petBreed || null,
-        petSize: bookingForm.petSize,
-        tutorName: bookingForm.tutorName,
-        phone: bookingForm.phone || 'Admin',
-        date,
-        time: bookingSlot.slot,
-        totalPrice: calcBookingTotal(bookingForm),
-        notes: bookingForm.notes,
-        isVip: bookingForm.isVip,
-      }),
-    })
-    if (res.ok) {
-      const { appointmentId } = await res.json()
-      await fetch(`/api/admin/appointments/${appointmentId}`, {
-        method: 'PATCH',
+    try {
+      const res = await fetch('/api/appointments', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'CONFIRMED' }),
+        body: JSON.stringify({
+          serviceType: 'grooming',
+          package: bookingForm.pkg,
+          addons: bookingForm.addons,
+          unitId: bookingSlot.unitId,
+          professional: bookingSlot.pro,
+          petName: bookingForm.petName,
+          petBreed: bookingForm.petBreed || null,
+          petSize: bookingForm.petSize,
+          tutorName: bookingForm.tutorName,
+          phone: bookingForm.phone || 'Admin',
+          date,
+          time: bookingSlot.slot,
+          totalPrice: calcBookingTotal(bookingForm),
+          notes: bookingForm.notes,
+          isVip: bookingForm.isVip,
+        }),
       })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.appointmentId) {
+          await fetch(`/api/admin/appointments/${data.appointmentId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'CONFIRMED' }),
+          }).catch(() => {})
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao criar agendamento:', e)
     }
     setBookingSaving(false)
     setBookingSlot(null)
@@ -263,17 +268,25 @@ export default function Dashboard() {
               {bookingSlot.slot === '' && (
                 <>
                   <div>
+                    <label style={labelStyle}>Unidade *</label>
+                    <select style={inputStyle} value={bookingSlot.unitId} onChange={e => setBookingSlot(s => ({ ...s!, unitId: e.target.value }))}>
+                      {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
                     <label style={labelStyle}>Horário *</label>
                     <select style={inputStyle} value={bookingSlot.slot} onChange={e => setBookingSlot(s => ({ ...s!, slot: e.target.value }))}>
                       <option value="">Selecione o horário</option>
                       {(() => { const s: string[] = []; for (let h = 7; h <= 19; h++) { s.push(`${String(h).padStart(2,'0')}:00`); if (h < 19) s.push(`${String(h).padStart(2,'0')}:30`) } return s })().map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
-                  <div>
+                  <div style={{ gridColumn: '1/-1' }}>
                     <label style={labelStyle}>Profissional</label>
                     <select style={inputStyle} value={bookingSlot.pro ?? ''} onChange={e => setBookingSlot(s => ({ ...s!, pro: e.target.value || null }))}>
                       <option value="">Sem preferência</option>
-                      {(PROFESSIONALS[isAdmin ? (unitFilter !== 'all' ? unitFilter : 'caucaia') : (user?.unitId ?? 'caucaia')] ?? []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      {Object.entries(PROFESSIONALS).flatMap(([uid, pros]) =>
+                        pros.map(p => <option key={p.id} value={p.id}>{p.name} ({UNITS.find(u => u.id === uid)?.name ?? uid})</option>)
+                      )}
                     </select>
                   </div>
                 </>
@@ -646,8 +659,8 @@ export default function Dashboard() {
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => { const dt = new Date(date+'T12:00:00'); dt.setDate(dt.getDate()-1); const iso = dt.toISOString().split('T')[0]; setDate(iso); setCalMonth(iso.substring(0,7)) }} style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>‹</button>
                     <button onClick={() => { const dt = new Date(date+'T12:00:00'); dt.setDate(dt.getDate()+1); const iso = dt.toISOString().split('T')[0]; setDate(iso); setCalMonth(iso.substring(0,7)) }} style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>›</button>
-                    <button onClick={() => { setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [], notes: '', isVip: false }); setBookingSlot({ slot: '', pro: null }) }} title="Novo agendamento" style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#004A99', color: '#fff', cursor: 'pointer', fontSize: 20, fontWeight: 900, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-                    <button onClick={() => { setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [], notes: '', isVip: true }); setBookingSlot({ slot: '', pro: null }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 800 }}>
+                    <button onClick={() => { const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'); setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [], notes: '', isVip: false }); setBookingSlot({ slot: '', pro: null, unitId: u }) }} title="Novo agendamento" style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#004A99', color: '#fff', cursor: 'pointer', fontSize: 20, fontWeight: 900, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                    <button onClick={() => { const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'); setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [], notes: '', isVip: true }); setBookingSlot({ slot: '', pro: null, unitId: u }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 800 }}>
                       ⭐ Encaixe VIP
                     </button>
                   </div>
@@ -737,7 +750,7 @@ export default function Dashboard() {
                             const appts = getAppts(slot, pro)
                             const isEmpty = appts.length === 0
                             return (
-                              <div key={pi} onClick={() => isEmpty && setBookingSlot({ slot, pro })} style={{ flex: 1, minWidth: COL_MIN_W, borderRight: pi < visiblePros.length - 1 ? '1px solid #f0f4f8' : 'none', padding: 6, cursor: isEmpty ? 'pointer' : 'default', position: 'relative', display: 'flex', flexDirection: 'column', gap: 4 }}
+                              <div key={pi} onClick={() => isEmpty && setBookingSlot({ slot, pro, unitId: unitKey ?? (user?.unitId ?? 'caucaia') })} style={{ flex: 1, minWidth: COL_MIN_W, borderRight: pi < visiblePros.length - 1 ? '1px solid #f0f4f8' : 'none', padding: 6, cursor: isEmpty ? 'pointer' : 'default', position: 'relative', display: 'flex', flexDirection: 'column', gap: 4 }}
                                 onMouseEnter={e => { if (isEmpty) (e.currentTarget as HTMLElement).style.background = '#f0f6ff' }}
                                 onMouseLeave={e => { if (isEmpty) (e.currentTarget as HTMLElement).style.background = '' }}
                               >
