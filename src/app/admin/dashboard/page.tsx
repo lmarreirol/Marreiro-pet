@@ -989,10 +989,10 @@ function ClinicTab({ isAdmin, userUnitId }: { isAdmin: boolean; userUnitId?: str
                     {svcRows.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '16px 8px', color: '#aaa', fontSize: 12 }}>Nenhum agendamento</div>
                     ) : svcRows.map(a => (
-                      <div key={a.id} style={{ background: '#fff', borderRadius: 8, padding: '7px 10px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: `3px solid ${STATUS_COLORS[a.status]}` }}>
+                      <div key={a.id} style={{ background: '#fff', borderRadius: 8, padding: '7px 10px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: `3px solid ${a.status === 'AWAITING_PAYMENT' ? '#e5e7eb' : STATUS_COLORS[a.status]}` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                           <span style={{ fontSize: 13, fontWeight: 900, color: svcColor }}>{a.appointmentTime}</span>
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 20, background: STATUS_COLORS[a.status] + '20', color: STATUS_COLORS[a.status] }}>{STATUS_LABELS[a.status]}</span>
+                          {a.status !== 'AWAITING_PAYMENT' && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 20, background: STATUS_COLORS[a.status] + '20', color: STATUS_COLORS[a.status] }}>{STATUS_LABELS[a.status]}</span>}
                         </div>
                         <div style={{ fontWeight: 800, fontSize: 12, color: '#0F1B2D' }}>{a.petName}</div>
                         <div style={{ fontSize: 11, color: '#888' }}>{a.tutorName}</div>
