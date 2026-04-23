@@ -73,7 +73,7 @@ export default function Dashboard() {
   const [calMonth, setCalMonth] = useState(() => todayISO().substring(0, 7))
   const [unitFilter, setUnitFilter] = useState<string>('all')
   const [proFilter, setProFilter] = useState<string>('all')
-  const [tab, setTab] = useState<'appointments' | 'clinic' | 'availability' | 'report' | 'adoption' | 'blog'>('appointments')
+  const [tab, setTab] = useState<'appointments' | 'clinic' | 'availability' | 'report' | 'adoption' | 'blog' | 'settings'>('appointments')
   const [refreshKey, setRefreshKey] = useState(0)
   const [search, setSearch] = useState('')
   const [monthCounts, setMonthCounts] = useState<Record<string, number>>({})
@@ -544,12 +544,17 @@ export default function Dashboard() {
       </div>
 
       {/* Tabs */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 28px', display: 'flex', gap: 4 }}>
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 28px', display: 'flex', gap: 4, alignItems: 'center' }}>
         {(['appointments', 'clinic', 'availability', 'report', 'adoption', 'blog'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ padding: '14px 18px', fontSize: 14, fontWeight: tab === t ? 800 : 500, color: tab === t ? '#004A99' : '#666', background: 'none', border: 'none', borderBottom: tab === t ? '2px solid #004A99' : '2px solid transparent', cursor: 'pointer' }}>
             {t === 'appointments' ? 'Agendamentos' : t === 'clinic' ? 'Agenda Clínica' : t === 'availability' ? 'Disponibilidade' : t === 'report' ? 'Relatório de Agenda' : t === 'adoption' ? 'Adoção' : 'Blog'}
           </button>
         ))}
+        {isAdmin && (
+          <button onClick={() => setTab('settings')} title="Configurações" style={{ marginLeft: 'auto', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', borderBottom: tab === 'settings' ? '2px solid #004A99' : '2px solid transparent', color: tab === 'settings' ? '#004A99' : '#666', fontSize: 20, display: 'flex', alignItems: 'center' }}>
+            ⚙️
+          </button>
+        )}
       </div>
 
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 16px' }}>
@@ -823,6 +828,10 @@ export default function Dashboard() {
 
         {tab === 'blog' && (
           <BlogTab />
+        )}
+
+        {tab === 'settings' && (
+          <SettingsTab />
         )}
       </div>
     </div>
@@ -1637,6 +1646,181 @@ function BlogTab() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+type UserRow = { id: string; username: string; name: string; role: string; unitId: string | null }
+
+function SettingsTab() {
+  const [users, setUsers] = useState<UserRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', role: 'RECEPTIONIST', unitId: '', password: '' })
+  const [editSaving, setEditSaving] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createForm, setCreateForm] = useState({ username: '', name: '', password: '', role: 'RECEPTIONIST', unitId: '' })
+  const [createSaving, setCreateSaving] = useState(false)
+  const [createError, setCreateError] = useState('')
+
+  const UNIT_OPTIONS = [
+    { id: '', label: '— Sem unidade (Admin) —' },
+    { id: 'caucaia', label: 'Caucaia' },
+    { id: 'pecem', label: 'Pecém' },
+    { id: 'saogoncalo', label: 'São Gonçalo' },
+    { id: 'taiba', label: 'Taíba' },
+  ]
+
+  const load = () => {
+    setLoading(true)
+    fetch('/api/admin/users').then(r => r.json()).then(d => { setUsers(d); setLoading(false) }).catch(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  const openEdit = (u: UserRow) => {
+    setEditingUser(u)
+    setEditForm({ name: u.name, role: u.role, unitId: u.unitId ?? '', password: '' })
+  }
+
+  const saveEdit = async () => {
+    if (!editingUser) return
+    setEditSaving(true)
+    const body: Record<string, string> = { name: editForm.name, role: editForm.role, unitId: editForm.unitId }
+    if (editForm.password) body.password = editForm.password
+    await fetch(`/api/admin/users/${editingUser.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    })
+    setEditSaving(false)
+    setEditingUser(null)
+    load()
+  }
+
+  const deleteUser = async (u: UserRow) => {
+    if (!window.confirm(`Deletar o usuário "${u.username}"? Esta ação não pode ser desfeita.`)) return
+    await fetch(`/api/admin/users/${u.id}`, { method: 'DELETE' })
+    load()
+  }
+
+  const saveCreate = async () => {
+    setCreateError('')
+    if (!createForm.username || !createForm.password) { setCreateError('Usuário e senha são obrigatórios.'); return }
+    setCreateSaving(true)
+    const res = await fetch('/api/admin/users', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...createForm, unitId: createForm.unitId || null }),
+    })
+    const data = await res.json()
+    setCreateSaving(false)
+    if (!res.ok) { setCreateError(data.error ?? 'Erro ao criar usuário'); return }
+    setCreating(false)
+    setCreateForm({ username: '', name: '', password: '', role: 'RECEPTIONIST', unitId: '' })
+    load()
+  }
+
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }
+  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 4, display: 'block' }
+
+  return (
+    <div style={{ maxWidth: 800 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F1B2D', margin: 0 }}>Gerenciar Usuários</h2>
+        <button onClick={() => setCreating(true)} style={{ padding: '10px 20px', borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+          + Novo usuário
+        </button>
+      </div>
+
+      {loading ? <p style={{ color: '#888' }}>Carregando...</p> : (
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>
+                {['Usuário', 'Nome', 'Função', 'Unidade', ''].map(h => (
+                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#888' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u, i) => (
+                <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                  <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 700, color: '#0F1B2D' }}>{u.username}</td>
+                  <td style={{ padding: '14px 16px', fontSize: 14, color: '#444' }}>{u.name}</td>
+                  <td style={{ padding: '14px 16px' }}>
+                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: u.role === 'ADMIN' ? '#EFF6FF' : '#F0FDF4', color: u.role === 'ADMIN' ? '#1D4ED8' : '#15803D' }}>
+                      {u.role === 'ADMIN' ? 'Admin' : 'Recepcionista'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px 16px', fontSize: 13, color: '#666' }}>
+                    {u.unitId ? ({ caucaia: 'Caucaia', pecem: 'Pecém', saogoncalo: 'São Gonçalo', taiba: 'Taíba' } as Record<string, string>)[u.unitId] ?? u.unitId : '—'}
+                  </td>
+                  <td style={{ padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button onClick={() => openEdit(u)} style={{ padding: '6px 14px', borderRadius: 8, background: '#f1f5f9', color: '#0F1B2D', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer' }}>Editar</button>
+                      <button onClick={() => deleteUser(u)} style={{ padding: '6px 14px', borderRadius: 8, background: '#fff', color: '#dc2626', fontWeight: 700, fontSize: 12, border: '1.5px solid #dc2626', cursor: 'pointer' }}>Remover</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {editingUser && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: '100%', maxWidth: 440, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: '#0F1B2D' }}>Editar: {editingUser.username}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div><label style={labelStyle}>Nome</label><input style={inputStyle} value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></div>
+              <div><label style={labelStyle}>Função</label>
+                <select style={inputStyle} value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}>
+                  <option value="ADMIN">Admin</option>
+                  <option value="RECEPTIONIST">Recepcionista</option>
+                </select>
+              </div>
+              <div><label style={labelStyle}>Unidade</label>
+                <select style={inputStyle} value={editForm.unitId} onChange={e => setEditForm(f => ({ ...f, unitId: e.target.value }))}>
+                  {UNIT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+              </div>
+              <div><label style={labelStyle}>Nova senha (deixe em branco para não alterar)</label><input style={inputStyle} type="password" placeholder="••••••••" value={editForm.password} onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))} /></div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+              <button onClick={() => setEditingUser(null)} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#f1f5f9', color: '#444', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={saveEdit} disabled={editSaving} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', opacity: editSaving ? 0.7 : 1 }}>{editSaving ? 'Salvando...' : 'Salvar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {creating && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: '100%', maxWidth: 440, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: '#0F1B2D' }}>Novo Usuário</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div><label style={labelStyle}>Usuário (login)</label><input style={inputStyle} placeholder="ex: maria" value={createForm.username} onChange={e => setCreateForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/\s/g, '') }))} /></div>
+              <div><label style={labelStyle}>Nome completo</label><input style={inputStyle} placeholder="Maria Silva" value={createForm.name} onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))} /></div>
+              <div><label style={labelStyle}>Senha</label><input style={inputStyle} type="password" placeholder="••••••••" value={createForm.password} onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))} /></div>
+              <div><label style={labelStyle}>Função</label>
+                <select style={inputStyle} value={createForm.role} onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}>
+                  <option value="ADMIN">Admin</option>
+                  <option value="RECEPTIONIST">Recepcionista</option>
+                </select>
+              </div>
+              <div><label style={labelStyle}>Unidade</label>
+                <select style={inputStyle} value={createForm.unitId} onChange={e => setCreateForm(f => ({ ...f, unitId: e.target.value }))}>
+                  {UNIT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+              </div>
+              {createError && <p style={{ color: '#dc2626', fontSize: 13, margin: 0 }}>{createError}</p>}
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+              <button onClick={() => { setCreating(false); setCreateError('') }} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#f1f5f9', color: '#444', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={saveCreate} disabled={createSaving} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', opacity: createSaving ? 0.7 : 1 }}>{createSaving ? 'Criando...' : 'Criar usuário'}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
