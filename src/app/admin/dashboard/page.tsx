@@ -1038,17 +1038,25 @@ const ALL_SLOTS = ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00'
 
 function AvailabilityTab({ unitId, isAdmin }: { unitId?: string; isAdmin: boolean }) {
   const [selectedUnit, setSelectedUnit] = useState(unitId ?? 'caucaia')
-  const [professional, setProfessional] = useState(PROFESSIONALS[unitId ?? 'caucaia']?.[0]?.id ?? '')
+  const [allPros, setAllPros] = useState<ProRow[]>([])
+  const [professional, setProfessional] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [slots, setSlots] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  const professionals = PROFESSIONALS[selectedUnit] ?? []
+  useEffect(() => {
+    fetch('/api/admin/professionals').then(r => r.json()).then((d: ProRow[]) => {
+      const active = d.filter(p => p.active)
+      setAllPros(active)
+      const defaultPro = active.find(p => p.unitId === (unitId ?? 'caucaia')) ?? active[0]
+      if (defaultPro) setProfessional(defaultPro.slug)
+    })
+  }, [])
 
-  useEffect(() => { setProfessional(professionals[0]?.id ?? ''); setSlots([]) }, [selectedUnit])
   useEffect(() => {
     if (!professional || !date) return
+    setSlots([])
     fetch(`/api/availability?professional=${professional}&date=${date}`).then(r => r.json()).then(d => setSlots(d.slots ?? []))
   }, [professional, date])
 
@@ -1058,24 +1066,30 @@ function AvailabilityTab({ unitId, isAdmin }: { unitId?: string; isAdmin: boolea
     setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
+  const grouped = UNITS.map(u => ({ ...u, pros: allPros.filter(p => p.unitId === u.id) }))
+
   return (
     <div style={{ maxWidth: 560 }}>
       <div style={{ background: '#fff', borderRadius: 16, padding: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr 1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr 1fr' : '1fr 1fr', gap: 12, marginBottom: 8 }}>
+          <div>
+            <label style={labelStyle}>Profissional</label>
+            <select value={professional} onChange={e => setProfessional(e.target.value)} style={inputStyle}>
+              {grouped.map(g => g.pros.length > 0 && (
+                <optgroup key={g.id} label={g.name}>
+                  {g.pros.map(p => <option key={p.slug} value={p.slug}>{p.name}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </div>
           {isAdmin && (
             <div>
-              <label style={labelStyle}>Unidade</label>
+              <label style={labelStyle}>Atende nesta unidade</label>
               <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)} style={inputStyle}>
                 {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
             </div>
           )}
-          <div>
-            <label style={labelStyle}>Profissional</label>
-            <select value={professional} onChange={e => setProfessional(e.target.value)} style={inputStyle}>
-              {professionals.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
           <div>
             <label style={labelStyle}>Data</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1085,6 +1099,11 @@ function AvailabilityTab({ unitId, isAdmin }: { unitId?: string; isAdmin: boolea
             </div>
           </div>
         </div>
+        {isAdmin && professional && (
+          <p style={{ fontSize: 12, color: '#888', margin: '0 0 12px', padding: '6px 10px', background: '#f8fafc', borderRadius: 8 }}>
+            💡 A unidade selecionada é onde <strong>{allPros.find(p => p.slug === professional)?.name ?? professional}</strong> irá atender neste dia. A unidade principal pode ser diferente.
+          </p>
+        )}
         <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 16, height: 16, borderRadius: 4, background: '#e8f0fa', border: '2px solid #004A99' }} />
@@ -1104,7 +1123,7 @@ function AvailabilityTab({ unitId, isAdmin }: { unitId?: string; isAdmin: boolea
           ))}
         </div>
       </div>
-      <button onClick={save} disabled={saving} style={{ width: '100%', padding: '13px', borderRadius: 12, background: saved ? '#16a34a' : '#EF7720', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer', border: 'none' }}>
+      <button onClick={save} disabled={saving || !professional} style={{ width: '100%', padding: '13px', borderRadius: 12, background: saved ? '#16a34a' : '#EF7720', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer', border: 'none', opacity: !professional ? 0.6 : 1 }}>
         {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar disponibilidade'}
       </button>
     </div>
