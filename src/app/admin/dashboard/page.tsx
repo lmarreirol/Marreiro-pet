@@ -373,9 +373,27 @@ export default function Dashboard() {
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={labelStyle}>Nome do pet *</label>
-                <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.petName} onChange={e => setEditForm(f => ({ ...f, petName: e.target.value }))} disabled={editLocked} />
+              <div style={{ gridColumn: '1/-1', display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Nome do pet *</label>
+                  <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.petName} onChange={e => setEditForm(f => ({ ...f, petName: e.target.value }))} disabled={editLocked} />
+                </div>
+                <div style={{ flexShrink: 0 }}>
+                  <label style={labelStyle}>CPF do tutor</label>
+                  {editingAppt?.tutorCpf ? (
+                    <div onClick={() => {
+                      navigator.clipboard.writeText((editingAppt.tutorCpf ?? '').replace(/\D/g, ''))
+                      setCpfCopied(true)
+                      setTimeout(() => setCpfCopied(false), 2000)
+                    }} title="Clique para copiar o CPF"
+                      style={{ ...inputStyle, width: 'auto', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, userSelect: 'none', color: cpfCopied ? '#16a34a' : '#0F1B2D', borderColor: cpfCopied ? '#16a34a' : '#e5e7eb', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontWeight: 700, letterSpacing: 0.5 }}>{(editingAppt.tutorCpf ?? '').replace(/\D/g, '')}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: cpfCopied ? '#16a34a' : '#bbb' }}>{cpfCopied ? '✓' : '📋'}</span>
+                    </div>
+                  ) : (
+                    <div style={{ ...inputStyle, background: '#f8fafc', color: '#bbb', fontStyle: 'italic', whiteSpace: 'nowrap' }}>Não informado</div>
+                  )}
+                </div>
               </div>
               <div>
                 <label style={labelStyle}>Raça</label>
@@ -396,22 +414,6 @@ export default function Dashboard() {
               <div>
                 <label style={labelStyle}>Telefone</label>
                 <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} disabled={editLocked} />
-              </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={labelStyle}>CPF do tutor</label>
-                {editingAppt?.tutorCpf ? (
-                  <div onClick={() => {
-                    navigator.clipboard.writeText((editingAppt.tutorCpf ?? '').replace(/\D/g, ''))
-                    setCpfCopied(true)
-                    setTimeout(() => setCpfCopied(false), 2000)
-                  }} title="Clique para copiar o CPF"
-                    style={{ ...inputStyle, background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none', color: cpfCopied ? '#16a34a' : '#0F1B2D', borderColor: cpfCopied ? '#16a34a' : '#e5e7eb', transition: 'all 0.2s' }}>
-                    <span style={{ fontWeight: 700, letterSpacing: 1 }}>{editingAppt.tutorCpf}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: cpfCopied ? '#16a34a' : '#aaa' }}>{cpfCopied ? '✓ Copiado!' : '📋 Copiar'}</span>
-                  </div>
-                ) : (
-                  <div style={{ ...inputStyle, background: '#f8fafc', color: '#bbb', fontStyle: 'italic' }}>Não informado</div>
-                )}
               </div>
               <div>
                 <label style={labelStyle}>Pacote</label>
