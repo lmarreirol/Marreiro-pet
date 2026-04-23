@@ -17,7 +17,7 @@ const ADDON_DURATION: Record<string, number> = {
 }
 
 const ALL_SLOTS = ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30']
-const DEFAULT_SLOTS = ALL_SLOTS.filter(s => s !== '12:00' && s !== '12:30')
+const DEFAULT_SLOTS = ALL_SLOTS
 
 function getSlotsBlockedByAppointment(time: string, pkg: string | null, addons: string[]): string[] {
   const durationMin = (PACKAGE_DURATION[pkg ?? ''] ?? 30) + addons.reduce((s, a) => s + (ADDON_DURATION[a] ?? 0), 0)

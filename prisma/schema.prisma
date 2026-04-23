@@ -91,6 +91,23 @@ model AdoptionPet {
   createdAt   DateTime @default(now())
 }
 
+model BlogPost {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  tag         String
+  excerpt     String
+  content     String
+  coverColor  String   @default("orange")
+  imageUrl    String?
+  readTime    String   @default("5 min")
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([published])
+}
+
 model Availability {
   id           String   @id @default(cuid())
   professional String

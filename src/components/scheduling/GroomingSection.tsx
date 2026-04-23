@@ -48,28 +48,30 @@ const UNITS = [
   { id: 'taiba', name: 'Taíba', sub: 'São Gonçalo do Amarante' },
 ]
 
+const ANY_PRO = { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' }
+
 const PROFESSIONALS: Record<string, { id: string; name: string; sub: string }[]> = {
   caucaia: [
+    ANY_PRO,
     { id: 'victor', name: 'Victor Lopes', sub: 'Grooming' },
     { id: 'daniele', name: 'Daniele Santos', sub: 'Banhista' },
     { id: 'eduarda', name: 'Eduarda', sub: 'Banhista' },
     { id: 'israel', name: 'Israel', sub: 'Banhista' },
-    { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' },
   ],
   pecem: [
+    ANY_PRO,
     { id: 'vitoria', name: 'Vitória Duraes', sub: 'Grooming' },
     { id: 'christian', name: 'Christian Fernandes', sub: 'Banhista' },
-    { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' },
   ],
   taiba: [
+    ANY_PRO,
     { id: 'andresa', name: 'Andresa Martins', sub: 'Grooming' },
     { id: 'erica', name: 'Erica Melo', sub: 'Banhista' },
-    { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' },
   ],
   saogoncalo: [
+    ANY_PRO,
     { id: 'anderson', name: 'Anderson Correia', sub: 'Grooming' },
     { id: 'carla', name: 'Carla Janaina', sub: 'Banhista' },
-    { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' },
   ],
 }
 
@@ -114,12 +116,22 @@ const initialState: GroomingState = {
   date: null, time: null, vip: false, petName: '', petBreed: '', tutorName: '', phone: '', cpf: '', notes: '',
 }
 
-function Recap({ data, total, totalDurationMin }: { data: GroomingState; total: number; totalDurationMin: number }) {
+function Recap({ data, total, totalDurationMin, previewPro, previewProStatus }: { data: GroomingState; total: number; totalDurationMin: number; previewPro: string | null; previewProStatus: 'idle' | 'loading' | 'found' | 'none' }) {
   const size = GROOMING_SIZES.find(s => s.id === data.size)
   const pkg = GROOMING_PACKAGES.find(p => p.id === data.package)
   const unit = UNITS.find(u => u.id === data.unit)
   const pro = data.unit ? (PROFESSIONALS[data.unit] ?? []).find(p => p.id === data.professional) : null
   const addons = GROOMING_ADDONS.filter(a => data.addons.includes(a.id))
+
+  const proDisplay = () => {
+    if (data.vip) return 'A definir'
+    if (data.professional !== 'any') return pro?.name || '—'
+    if (previewProStatus === 'idle') return '—'
+    if (previewProStatus === 'loading') return 'Verificando...'
+    if (previewProStatus === 'found' && previewPro) return PRO_NAMES[previewPro] ?? previewPro
+    return 'Sem disponibilidade neste horário'
+  }
+
   return (
     <div className="grooming-recap" id="resumo-agendamento">
       <h4>Resumo do agendamento</h4>
@@ -127,7 +139,15 @@ function Recap({ data, total, totalDurationMin }: { data: GroomingState; total: 
       <div className={`recap-row ${!size ? 'muted' : ''}`}><span className="k">Porte</span><span className="v">{size ? `${size.name} (${size.kg})` : '—'}</span></div>
       <div className={`recap-row ${!pkg ? 'muted' : ''}`}><span className="k">Pacote</span><span className="v">{pkg?.name || '—'}</span></div>
       <div className={`recap-row ${addons.length === 0 ? 'muted' : ''}`}><span className="k">Extras</span><span className="v">{addons.length > 0 ? addons.map(a => a.name).join(', ') : 'Nenhum'}</span></div>
-      <div className={`recap-row ${!pro ? 'muted' : ''}`}><span className="k">Profissional</span><span className="v">{pro?.name || '—'}</span></div>
+      <div className={`recap-row ${previewProStatus === 'none' ? 'muted' : (!pro && previewProStatus === 'idle' ? 'muted' : '')}`}>
+        <span className="k">Profissional</span>
+        <span className="v" style={{ display: 'flex', alignItems: 'center', gap: 6, color: previewProStatus === 'none' ? '#dc2626' : undefined }}>
+          {proDisplay()}
+          {data.professional === 'any' && previewProStatus === 'found' && (
+            <span style={{ fontSize: 10, background: '#dcfce7', color: '#16a34a', fontWeight: 700, padding: '2px 6px', borderRadius: 4 }}>auto</span>
+          )}
+        </span>
+      </div>
       <div className={`recap-row ${!unit ? 'muted' : ''}`}><span className="k">Unidade</span><span className="v">{unit?.name || '—'}</span></div>
       <div className={`recap-row ${!data.date ? 'muted' : ''}`}><span className="k">Data & hora</span><span className="v">{data.date ? `${data.date.day}/${((data.date.date.getMonth()) + 1).toString().padStart(2, '0')} às ${data.time || '—'}` : '—'}</span></div>
       {totalDurationMin > 0 && <div className="recap-row"><span className="k">Duração</span><span className="v">~{totalDurationMin} min</span></div>}
@@ -141,6 +161,13 @@ function Recap({ data, total, totalDurationMin }: { data: GroomingState; total: 
   )
 }
 
+const PRO_NAMES: Record<string, string> = {
+  victor: 'Victor Lopes', daniele: 'Daniele Santos', eduarda: 'Eduarda', israel: 'Israel',
+  vitoria: 'Vitória Duraes', christian: 'Christian Fernandes',
+  andresa: 'Andresa Martins', erica: 'Erica Melo',
+  anderson: 'Anderson Correia', carla: 'Carla Janaina',
+}
+
 export default function GroomingSection() {
   const [step, setStep] = useState(0)
   const [data, setData] = useState<GroomingState>(initialState)
@@ -148,6 +175,9 @@ export default function GroomingSection() {
   const [error, setError] = useState<string | null>(null)
   const [availableSlots, setAvailableSlots] = useState<string[] | null>(null)
   const [dateOffset, setDateOffset] = useState(0)
+  const [previewPro, setPreviewPro] = useState<string | null>(null)
+  const [previewProStatus, setPreviewProStatus] = useState<'idle' | 'loading' | 'found' | 'none'>('idle')
+  const [slotAvailability, setSlotAvailability] = useState<Record<string, number>>({})
   const allDates = useMemo(() => getNextDates(60), [])
   const dates = allDates.slice(dateOffset, dateOffset + 14)
   const TOTAL = 5
@@ -158,16 +188,52 @@ export default function GroomingSection() {
   useEffect(() => {
     const pkg = sessionStorage.getItem('preselect-package')
     if (pkg) { update({ package: pkg }); sessionStorage.removeItem('preselect-package') }
+    const today = allDates[0]
+    if (today && !today.disabled) update({ date: today })
   }, [])
 
   useEffect(() => {
-    if (!data.professional || !data.date) { setAvailableSlots(null); return }
+    if (!data.professional || data.professional === 'any' || !data.date) { setAvailableSlots(null); return }
+    setAvailableSlots(null)
     const dateStr = data.date.date.toISOString().split('T')[0]
     fetch(`/api/availability?professional=${data.professional}&date=${dateStr}`)
       .then(r => r.json())
       .then(d => setAvailableSlots(Array.isArray(d.slots) ? d.slots : []))
       .catch(() => setAvailableSlots(null))
   }, [data.professional, data.date])
+
+  useEffect(() => {
+    if (data.professional !== 'any' || !data.date || !data.unit) {
+      setSlotAvailability({})
+      return
+    }
+    const dateStr = data.date.date.toISOString().split('T')[0]
+    fetch(`/api/available-slots?unitId=${data.unit}&date=${dateStr}`)
+      .then(r => r.json())
+      .then(d => {
+        const map: Record<string, number> = {}
+        for (const s of d.slots ?? []) map[s.time] = s.availableCount
+        setSlotAvailability(map)
+      })
+      .catch(() => setSlotAvailability({}))
+  }, [data.professional, data.date, data.unit])
+
+  useEffect(() => {
+    if (data.professional !== 'any' || !data.date || !data.time || !data.unit) {
+      setPreviewPro(null)
+      setPreviewProStatus('idle')
+      return
+    }
+    setPreviewProStatus('loading')
+    const dateStr = data.date.date.toISOString().split('T')[0]
+    fetch(`/api/auto-assign?unitId=${data.unit}&date=${dateStr}&time=${data.time}`)
+      .then(r => r.json())
+      .then(d => {
+        setPreviewPro(d.professional ?? null)
+        setPreviewProStatus(d.professional ? 'found' : 'none')
+      })
+      .catch(() => { setPreviewPro(null); setPreviewProStatus('none') })
+  }, [data.professional, data.date, data.time, data.unit])
 
   const pkg = GROOMING_PACKAGES.find(p => p.id === data.package)
   const base = pkg && data.size ? pkg.prices[data.size] : 0
@@ -362,7 +428,7 @@ export default function GroomingSection() {
                     </div>
                     <div className="date-grid" style={{ marginBottom: 24 }}>
                       {dates.map((d, i) => (
-                        <button key={i} type="button" className={`date-cell ${data.date?.day === d.day && data.date?.month === d.month ? 'selected' : ''}`} disabled={d.disabled} onClick={() => update({ date: d })}>
+                        <button key={i} type="button" className={`date-cell ${data.date?.day === d.day && data.date?.month === d.month ? 'selected' : ''}`} disabled={d.disabled} onClick={() => update({ date: d, time: null })}>
                           <div className="date-cell-day">{d.label}</div>
                           {d.day}
                           <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{d.month}</div>
@@ -379,15 +445,28 @@ export default function GroomingSection() {
                     {!data.vip && (
                       <div className="time-grid">
                         {GROOMING_TIMES.map((t, idx) => {
+                          const isToday = data.date ? data.date.date.toDateString() === new Date().toDateString() : false
+                          const isPast = isToday && (() => {
+                            const now = new Date()
+                            const [h, m] = t.split(':').map(Number)
+                            return h * 60 + m <= now.getHours() * 60 + now.getMinutes()
+                          })()
                           const hasConsecutive = (() => {
-                            const slots = availableSlots ?? GROOMING_TIMES
+                            const slots = data.professional === 'any' ? GROOMING_TIMES : (availableSlots ?? GROOMING_TIMES)
                             for (let i = 0; i < slotsNeeded; i++) {
                               if (!slots.includes(GROOMING_TIMES[idx + i] ?? '')) return false
                             }
                             return true
                           })()
-                          const disabled = !data.date || !hasConsecutive
-                          return <button key={t} type="button" className={`time-slot ${data.time === t ? 'selected' : ''}`} disabled={disabled} onClick={() => update({ time: t })}>{t}</button>
+                          const noProAvailable = data.professional === 'any' && Object.keys(slotAvailability).length > 0 && (() => {
+                            for (let i = 0; i < slotsNeeded; i++) {
+                              const s = GROOMING_TIMES[idx + i]
+                              if (!s || (slotAvailability[s] ?? 0) === 0) return true
+                            }
+                            return false
+                          })()
+                          const disabled = !data.date || isPast || !hasConsecutive || noProAvailable
+                          return <button key={t} type="button" className={`time-slot ${data.time === t ? 'selected' : ''}`} disabled={disabled} onClick={() => update({ time: t })} title={noProAvailable ? 'Sem profissional disponível' : isPast ? 'Horário já passou' : ''}>{t}</button>
                         })}
                       </div>
                     )}
@@ -478,7 +557,7 @@ export default function GroomingSection() {
             )}
           </div>
 
-          <Recap data={data} total={total} totalDurationMin={totalDurationMin} />
+          <Recap data={data} total={total} totalDurationMin={totalDurationMin} previewPro={previewPro} previewProStatus={previewProStatus} />
         </div>
       </div>
     </section>

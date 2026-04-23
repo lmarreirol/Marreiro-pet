@@ -1,6 +1,6 @@
 'use client'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, Suspense, useRef } from 'react'
 import Link from 'next/link'
 
 type Appointment = {
@@ -17,6 +17,7 @@ type Appointment = {
   appointmentTime: string
   totalPrice: string
   notes: string | null
+  isVip: boolean
 }
 
 const UNITS: Record<string, string> = {
@@ -41,6 +42,13 @@ const ADDONS: Record<string, string> = {
   'coloracao': 'Retirada de Nós',
 }
 
+const PRO_NAMES: Record<string, string> = {
+  victor: 'Victor Lopes', daniele: 'Daniele Santos', eduarda: 'Eduarda', israel: 'Israel',
+  vitoria: 'Vitória Duraes', christian: 'Christian Fernandes',
+  andresa: 'Andresa Martins', erica: 'Erica Melo',
+  anderson: 'Anderson Correia', carla: 'Carla Janaina',
+}
+
 const UNIT_PHONES: Record<string, string> = {
   caucaia: '5585994257643',
   pecem: '5585981173322',
@@ -52,6 +60,20 @@ function SucessoContent() {
   const searchParams = useSearchParams()
   const id = searchParams.get('id')
   const [apt, setApt] = useState<Appointment | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [downloading, setDownloading] = useState(false)
+
+  const downloadImage = async () => {
+    if (!cardRef.current) return
+    setDownloading(true)
+    const html2canvas = (await import('html2canvas')).default
+    const canvas = await html2canvas(cardRef.current, { scale: 2, backgroundColor: '#f0f4f8', useCORS: true })
+    const link = document.createElement('a')
+    link.download = `comprovante-marreiro-${apt?.petName ?? 'pet'}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+    setDownloading(false)
+  }
 
   useEffect(() => {
     if (!id) return
@@ -62,6 +84,7 @@ function SucessoContent() {
   const dateStr = date ? `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}` : ''
   const unitName = apt ? (UNITS[apt.unitId] ?? apt.unitId) : ''
   const pkgName = apt ? (PACKAGES[apt.package ?? ''] ?? apt.package ?? 'Serviço') : ''
+  const proName = apt?.professional ? (PRO_NAMES[apt.professional] ?? apt.professional) : null
 
   const addonsNames = apt?.addons?.map(id => ADDONS[id]).filter(Boolean).join(', ')
 
@@ -72,6 +95,7 @@ function SucessoContent() {
     (addonsNames ? `*Extras:* ${addonsNames}\n` : '') +
     `*Data:* ${dateStr} às ${apt.appointmentTime}\n` +
     `*Unidade:* ${unitName}\n` +
+    (proName ? `*Profissional:* ${proName}\n` : '') +
     `*Tutor:* ${apt.tutorName}\n` +
     `*Fone:* ${apt.phone}` +
     (apt.notes ? `\n*Obs:* ${apt.notes}` : '')
@@ -82,13 +106,30 @@ function SucessoContent() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: '#fff', borderRadius: 24, padding: 40, maxWidth: 480, width: '100%', textAlign: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.10)' }}>
-        <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#22C55E', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36 }}>✓</div>
+      <div ref={cardRef} style={{ background: '#fff', borderRadius: 24, padding: 40, maxWidth: 480, width: '100%', textAlign: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.10)' }}>
+
+        {/* Logo */}
+        <div style={{ marginBottom: 24 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/marreiro-logo-full.png" alt="Marreiro Pet" style={{ height: 48, objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+        </div>
+
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#22C55E', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 32 }}>✓</div>
 
         <h1 style={{ fontSize: 24, fontWeight: 900, marginBottom: 8, color: '#0F1B2D' }}>Agendamento recebido!</h1>
-        <p style={{ color: '#4A5468', fontSize: 15, lineHeight: 1.6, marginBottom: 28 }}>
+        <p style={{ color: '#4A5468', fontSize: 15, lineHeight: 1.6, marginBottom: apt?.isVip ? 16 : 28 }}>
           Olá, <strong>{apt?.tutorName ?? ''}</strong>! Seu agendamento foi registrado com sucesso. Salve o comprovante abaixo para seus registros.
         </p>
+
+        {apt?.isVip && (
+          <div style={{ background: '#FEF1E4', border: '1.5px solid #EF7720', borderRadius: 12, padding: '12px 16px', marginBottom: 24, textAlign: 'left', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <span style={{ fontSize: 20 }}>⭐</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: '#EF7720', marginBottom: 2 }}>Encaixe VIP solicitado</div>
+              <div style={{ fontSize: 13, color: '#92400e', lineHeight: 1.5 }}>Entraremos em contato para confirmar o horário e o profissional disponível para o seu atendimento com prioridade.</div>
+            </div>
+          </div>
+        )}
 
         {apt && (
           <div style={{ background: '#f8fafc', borderRadius: 14, padding: '18px 20px', marginBottom: 24, textAlign: 'left' }}>
@@ -98,6 +139,7 @@ function SucessoContent() {
               ...(addonsNames ? [{ k: 'Extras', v: addonsNames }] : []),
               { k: 'Data & hora', v: `${dateStr} às ${apt.appointmentTime}` },
               { k: 'Unidade', v: unitName },
+              ...(apt.isVip ? [{ k: 'Profissional', v: 'A definir' }] : proName ? [{ k: 'Profissional', v: proName }] : []),
               { k: 'Total', v: `R$ ${Number(apt.totalPrice).toFixed(2).replace('.', ',')}` },
             ].map(({ k, v }) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e5e7eb', fontSize: 14 }}>
@@ -108,44 +150,17 @@ function SucessoContent() {
           </div>
         )}
 
+        <p style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.6, margin: '16px 0 16px' }}>
+          🐾 Obrigado por confiar no <strong>Marreiro Pet</strong>! Seu pet estará em boas mãos. Qualquer dúvida, fale com a nossa equipe.
+        </p>
+
         {apt && (
-          <button onClick={() => {
-            const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
-            <title>Comprovante — Marreiro Pet</title>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 40px; color: #111; max-width: 520px; margin: 0 auto; }
-              .logo { font-size: 22px; font-weight: 900; color: #004A99; margin-bottom: 4px; }
-              .subtitle { font-size: 13px; color: #888; margin-bottom: 28px; }
-              h2 { font-size: 18px; color: #004A99; margin-bottom: 18px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
-              .row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
-              .row .k { color: #888; font-weight: 600; }
-              .row .v { font-weight: 700; color: #111; text-align: right; }
-              .footer { margin-top: 28px; font-size: 11px; color: #aaa; text-align: center; }
-              @media print { body { padding: 20px; } }
-            </style></head><body>
-            <div class="logo">Marreiro Pet</div>
-            <div class="subtitle">Clínica Veterinária e Pet Shop</div>
-            <h2>Comprovante de Agendamento</h2>
-            <div class="row"><span class="k">Pet</span><span class="v">${apt.petName}</span></div>
-            <div class="row"><span class="k">Serviço</span><span class="v">${pkgName}</span></div>
-            ${addonsNames ? `<div class="row"><span class="k">Extras</span><span class="v">${addonsNames}</span></div>` : ''}
-            <div class="row"><span class="k">Data & hora</span><span class="v">${dateStr} às ${apt.appointmentTime}</span></div>
-            <div class="row"><span class="k">Unidade</span><span class="v">${unitName}</span></div>
-            <div class="row"><span class="k">Tutor</span><span class="v">${apt.tutorName}</span></div>
-            <div class="row"><span class="k">WhatsApp</span><span class="v">${apt.phone}</span></div>
-            <div class="row"><span class="k">Total</span><span class="v">R$ ${Number(apt.totalPrice).toFixed(2).replace('.', ',')}</span></div>
-            ${apt.notes ? `<div class="row"><span class="k">Observações</span><span class="v">${apt.notes}</span></div>` : ''}
-            <div class="footer">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · Marreiro Pet</div>
-            <script>window.onload = () => window.print()</script>
-            </body></html>`
-            const w = window.open('', '_blank')
-            if (w) { w.document.write(html); w.document.close() }
-          }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', padding: '14px', borderRadius: 12, background: '#004A99', color: '#fff', fontWeight: 800, fontSize: 16, cursor: 'pointer', border: 'none', marginBottom: 12, boxSizing: 'border-box' }}>
-            ⬇ Salvar comprovante (PDF)
+          <button data-html2canvas-ignore onClick={downloadImage} disabled={downloading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', padding: '14px', borderRadius: 12, background: '#004A99', color: '#fff', fontWeight: 800, fontSize: 16, cursor: 'pointer', border: 'none', marginBottom: 12, boxSizing: 'border-box', opacity: downloading ? 0.7 : 1 }}>
+            {downloading ? 'Gerando imagem...' : '📸 Baixar comprovante'}
           </button>
         )}
 
-        <Link href="/" style={{ display: 'block', color: '#888', fontSize: 14, textDecoration: 'none' }}>
+        <Link data-html2canvas-ignore href="/" style={{ display: 'block', color: '#888', fontSize: 13, textDecoration: 'none' }}>
           Voltar para o site
         </Link>
       </div>

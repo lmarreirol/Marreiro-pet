@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import Icon from '@/components/ui/Icon'
 
 const SERVICES = [
@@ -17,12 +17,20 @@ const UNITS = [
 ]
 
 const PROFESSIONALS = [
+  { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' },
   { id: 'vitor', name: 'Vitor Fernandes', sub: 'Tosador especialista' },
   { id: 'daniele', name: 'Daniele Mendes', sub: 'Banhista & tosadora' },
-  { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' },
 ]
 
 const TIMES = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00']
+
+const PRO_NAMES: Record<string, string> = {
+  victor: 'Victor Lopes', daniele: 'Daniele Santos', eduarda: 'Eduarda',
+  israel: 'Israel', vitoria: 'Vitória Duraes', christian: 'Christian Fernandes',
+  andresa: 'Andresa Martins', erica: 'Erica Melo',
+  anderson: 'Anderson Correia', carla: 'Carla Janaina',
+  vitor: 'Vitor Fernandes',
+}
 
 function getNextDates(n: number) {
   const days = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
@@ -64,7 +72,23 @@ export default function Scheduler() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
+  const [assignedPro, setAssignedPro] = useState<string | null>(null)
+  const [availableSlots, setAvailableSlots] = useState<Record<string, number>>({}) // time → availableCount
+  const [loadingSlots, setLoadingSlots] = useState(false)
   const dates = useMemo(() => getNextDates(14), [])
+
+  const fetchAvailableSlots = useCallback(async (unitId: string, date: Date) => {
+    setLoadingSlots(true)
+    const iso = date.toISOString().split('T')[0]
+    try {
+      const res = await fetch(`/api/available-slots?unitId=${unitId}&date=${iso}`)
+      const json = await res.json()
+      const map: Record<string, number> = {}
+      for (const s of json.slots ?? []) map[s.time] = s.availableCount
+      setAvailableSlots(map)
+    } catch { setAvailableSlots({}) }
+    finally { setLoadingSlots(false) }
+  }, [])
 
   useEffect(() => {
     const preselect = sessionStorage.getItem('preselect-service')
@@ -73,6 +97,14 @@ export default function Scheduler() {
       update({ service: preselect })
     }
   }, [])
+
+  useEffect(() => {
+    if (data.professional === 'any' && data.date && data.unit) {
+      fetchAvailableSlots(data.unit, data.date.date)
+    } else {
+      setAvailableSlots({})
+    }
+  }, [data.professional, data.date, data.unit, fetchAvailableSlots])
   const TOTAL = 4
 
   const update = (patch: Partial<BookingState>) => setData(d => ({ ...d, ...patch }))
@@ -113,6 +145,7 @@ export default function Scheduler() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Erro ao agendar')
+      setAssignedPro(json.professional ?? null)
       setSubmitted(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao processar agendamento')
@@ -129,6 +162,7 @@ export default function Scheduler() {
       : ''
     const petSize = data.size === 'small' ? 'Pequeno (até 10kg)' : data.size === 'medium' ? 'Médio (10–20kg)' : data.size === 'large' ? 'Grande (acima de 20kg)' : ''
 
+    const proName = assignedPro ? (PRO_NAMES[assignedPro] ?? assignedPro) : null
     const waMsg = [
       `Olá! Gostaria de confirmar meu agendamento na unidade Marreiro Pet ${unit?.name}.`,
       ``,
@@ -136,6 +170,7 @@ export default function Scheduler() {
       `*Pet:* ${data.petName}${petSize ? ` (${petSize})` : ''}`,
       `*Tutor:* ${data.tutorName}`,
       `*Data:* ${dateStr} às ${data.time}`,
+      proName ? `*Profissional:* ${proName}` : '',
       data.notes ? `*Observações:* ${data.notes}` : '',
     ].filter(Boolean).join('\n')
     const waUrl = `https://wa.me/${unit?.whatsapp}?text=${encodeURIComponent(waMsg)}`
@@ -151,6 +186,7 @@ export default function Scheduler() {
             <div className="summary-row"><span className="k">Serviço</span><span className="v">{service?.name}</span></div>
             <div className="summary-row"><span className="k">Unidade</span><span className="v">{unit?.name}</span></div>
             <div className="summary-row"><span className="k">Data</span><span className="v">{dateStr} às {data.time}</span></div>
+            {assignedPro && <div className="summary-row"><span className="k">Profissional</span><span className="v">{PRO_NAMES[assignedPro] ?? assignedPro}</span></div>}
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 14, flexWrap: 'wrap' }}>
             <a href={waUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary"><Icon name="wa" size={16} /> Confirmar pelo WhatsApp</a>
@@ -238,24 +274,48 @@ export default function Scheduler() {
       {step === 2 && (
         <>
           <div className="form-title">Quando fica bom?</div>
-          <div className="form-sub">Selecione um dia e horário disponíveis.</div>
+          <div className="form-sub">
+            {data.professional === 'any'
+              ? 'Selecione um dia — os horários disponíveis serão carregados automaticamente.'
+              : 'Selecione um dia e horário disponíveis.'}
+          </div>
           <div className="label" style={{ marginBottom: 10 }}>Data</div>
           <div className="date-grid" style={{ marginBottom: 20 }}>
             {dates.map((d, i) => (
-              <button key={i} className={`date-cell ${data.date?.day === d.day ? 'selected' : ''}`} disabled={d.disabled} onClick={() => update({ date: d })}>
+              <button key={i} className={`date-cell ${data.date?.day === d.day ? 'selected' : ''}`} disabled={d.disabled} onClick={() => update({ date: d, time: null })}>
                 <div className="date-cell-day">{d.label}</div>{d.day}
               </button>
             ))}
           </div>
-          <div className="label" style={{ marginBottom: 10 }}>Horário</div>
+          <div className="label" style={{ marginBottom: 10 }}>
+            Horário
+            {data.professional === 'any' && data.date && loadingSlots && (
+              <span style={{ fontSize: 12, color: '#888', fontWeight: 400, marginLeft: 8 }}>carregando disponibilidade...</span>
+            )}
+          </div>
           <div className="time-grid">
             {TIMES.map(t => {
-              const disabled = !data.date || (t === '14:00' && (data.date?.day ?? 0) % 2 === 0)
+              const isAny = data.professional === 'any'
+              const hasAvailability = !isAny || (availableSlots[t] ?? 0) > 0
+              const disabled = !data.date || !hasAvailability || loadingSlots
               return (
-                <button key={t} className={`time-slot ${data.time === t ? 'selected' : ''}`} disabled={disabled} onClick={() => update({ time: t })}>{t}</button>
+                <button key={t} className={`time-slot ${data.time === t ? 'selected' : ''}`} disabled={disabled} onClick={() => update({ time: t })}
+                  title={isAny && data.date && !hasAvailability ? 'Sem profissional disponível neste horário' : ''}>
+                  {t}
+                  {isAny && data.date && !loadingSlots && hasAvailability && (availableSlots[t] ?? 0) > 0 && (
+                    <span style={{ fontSize: 10, display: 'block', color: '#16a34a', fontWeight: 600 }}>
+                      {availableSlots[t]} disponível{availableSlots[t] > 1 ? 'ais' : ''}
+                    </span>
+                  )}
+                </button>
               )
             })}
           </div>
+          {data.professional === 'any' && !data.date && (
+            <p style={{ fontSize: 13, color: '#888', marginTop: 12, textAlign: 'center' }}>
+              Selecione uma data para ver os horários disponíveis
+            </p>
+          )}
         </>
       )}
 
