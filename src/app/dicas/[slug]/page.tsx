@@ -89,11 +89,7 @@ export default function ArtigoPage() {
             {/* Conteúdo */}
             <article style={{ maxWidth: 760, margin: '0 auto', padding: '48px 24px 80px' }}>
               <p style={{ fontSize: 18, color: '#444', lineHeight: 1.75, fontWeight: 500, marginBottom: 32, borderLeft: '4px solid #EF7720', paddingLeft: 20 }}>{post.excerpt}</p>
-              <div style={{ fontSize: 16, color: '#333', lineHeight: 1.85 }}>
-                {post.content.split('\n\n').map((paragraph, i) => (
-                  paragraph.trim() && <p key={i} style={{ marginBottom: 24 }}>{paragraph.trim()}</p>
-                ))}
-              </div>
+              <div style={{ fontSize: 16, color: '#333', lineHeight: 1.85 }} dangerouslySetInnerHTML={{ __html: post.content }} />
 
               {/* CTA */}
               {post.tag === 'Nutrição' ? (
