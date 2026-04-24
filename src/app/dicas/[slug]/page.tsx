@@ -64,7 +64,7 @@ export default function ArtigoPage() {
                   <img src={post.imageUrl} alt="" aria-hidden style={{ position: 'absolute', inset: -10, width: 'calc(100% + 20px)', height: 'calc(100% + 20px)', objectFit: 'cover', objectPosition: 'center 20%', filter: 'blur(10px) brightness(1.2) saturate(0.8)' }} />
                   <div style={{ position: 'absolute', inset: 0, background: 'rgba(173,214,230,0.35)' }} />
                   {/* imagem nítida por cima */}
-                  <img src={post.imageUrl} alt={post.title} style={{ position: 'absolute', inset: 0, height: '100%', width: '100%', objectFit: 'contain', objectPosition: 'center 20%' }} />
+                  <img src={post.imageUrl} alt={post.title} style={{ position: 'absolute', inset: 0, height: '100%', width: '100%', objectFit: 'cover', objectPosition: '42% 15%' }} />
                 </>
               )}
               {!post.imageUrl && <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 14px)' }} />}
