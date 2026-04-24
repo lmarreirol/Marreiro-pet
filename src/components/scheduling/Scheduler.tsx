@@ -17,7 +17,7 @@ const VACCINES: Record<string, { id: string; name: string; price: number; priceL
       diseases: ['Cinomose', 'Parvovirose', 'Hepatite', 'Adenovirose', 'Parainfluenza', 'Coronavirose', 'Leptospirose (10 sorovares)'] },
     { id: 'antirabica-cao',  name: 'Antirábica (raiva)',            price: 60, priceLabel: 'R$ 60,00',
       diseases: ['Raiva'] },
-    { id: 'tosse-canis',     name: 'Vacina Tosse dos Canis',        price: 0,  priceLabel: 'A consultar',
+    { id: 'tosse-canis',     name: 'Vacina Tosse dos Canis',        price: 90, priceLabel: 'R$ 90,00',
       diseases: ['Bordetella', 'Parainfluenza'] },
     { id: 'anti-giardia',    name: 'Anti-Giárdia',                  price: 90, priceLabel: 'R$ 90,00',
       diseases: ['Giardíase'] },
