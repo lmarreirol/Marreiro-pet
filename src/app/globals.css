@@ -789,7 +789,7 @@ img { max-width: 100%; display: block; }
 .footer-tarly { display: flex; align-items: center; gap: 6px; font-size: 11px; color: rgba(255,255,255,0.35); letter-spacing: 0.04em; text-transform: uppercase; }
 .footer-tarly a { display: flex; align-items: center; opacity: 0.85; transition: opacity 0.2s; }
 .footer-tarly a:hover { opacity: 1; }
-.footer-tarly img { display: block; mix-blend-mode: screen; transform: translateY(-10%); }
+.footer-tarly img { display: block; mix-blend-mode: screen; transform: translateY(-20%); }
 @media (max-width: 800px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
 
 .wa-float {
