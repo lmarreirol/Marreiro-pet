@@ -87,7 +87,7 @@ export default function Dashboard() {
   }
   const ADDON_PRICES: Record<string, number> = { hidra: 28, ozonio: 35, dentes: 10, unhas: 36, perfume: 18, coloracao: 60 }
   const VIP_PRICE = 30
-  const calcBookingTotal = (f: typeof bookingForm) => {
+  const calcBookingTotal = (f: { pkg: string; petSize: string; addons: string[]; isVip: boolean }) => {
     const base = PKG_PRICES[f.pkg]?.[f.petSize] ?? 0
     const addonsTotal = f.addons.reduce((s, id) => s + (ADDON_PRICES[id] ?? 0), 0)
     return base + addonsTotal + (f.isVip ? VIP_PRICE : 0)
