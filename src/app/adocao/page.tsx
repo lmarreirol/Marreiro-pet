@@ -63,7 +63,7 @@ export default function AdocaoPage() {
           <div onClick={e => e.stopPropagation()} style={{ position: 'relative', maxWidth: 560, width: '100%' }}>
             <button onClick={() => setLightbox(null)} style={{ position: 'absolute', top: -16, right: -16, width: 36, height: 36, borderRadius: '50%', background: '#fff', border: 'none', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1, lineHeight: 1 }}>×</button>
             {lightbox.imageUrl ? (
-              <img src={lightbox.imageUrl} alt={lightbox.name} style={{ width: '100%', borderRadius: 16, display: 'block', maxHeight: '80vh', objectFit: 'contain' }} />
+              <img src={lightbox.imageUrl} alt={lightbox.name} loading="lazy" style={{ width: '100%', borderRadius: 16, display: 'block', maxHeight: '80vh', objectFit: 'contain' }} />
             ) : (
               <div style={{ background: '#1a1a2e', borderRadius: 16, height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>{lightbox.species === 'cachorro' ? '🐕' : '🐈'}</div>
             )}
@@ -123,8 +123,15 @@ export default function AdocaoPage() {
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 60, color: '#888' }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🐾</div>
-              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Nenhum pet disponível no momento</div>
-              <div style={{ fontSize: 14 }}>Volte em breve — novos resgates chegam com frequência!</div>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
+                {filter === 'todos' ? 'Nenhum pet disponível no momento' : `Nenhum ${filter} disponível no momento`}
+              </div>
+              <div style={{ fontSize: 14, marginBottom: 20 }}>Volte em breve — novos resgates chegam com frequência!</div>
+              {filter !== 'todos' && (
+                <button onClick={() => setFilter('todos')} style={{ padding: '10px 24px', borderRadius: 30, background: '#004A99', color: '#fff', border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                  Ver todos os pets
+                </button>
+              )}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24 }}>

@@ -10,6 +10,7 @@ export const authConfig: NextAuthConfig = {
         token.role = (user as Record<string, unknown>).role
         token.unitId = (user as Record<string, unknown>).unitId
         token.username = (user as Record<string, unknown>).username
+        token.tenantId = (user as Record<string, unknown>).tenantId
       }
       return token
     },
@@ -18,6 +19,7 @@ export const authConfig: NextAuthConfig = {
         (session.user as unknown as Record<string, unknown>).role = token.role
         ;(session.user as unknown as Record<string, unknown>).unitId = token.unitId
         ;(session.user as unknown as Record<string, unknown>).username = token.username
+        ;(session.user as unknown as Record<string, unknown>).tenantId = token.tenantId
       }
       return session
     },

@@ -73,7 +73,7 @@ export default function Dashboard() {
   const [calMonth, setCalMonth] = useState(() => todayISO().substring(0, 7))
   const [unitFilter, setUnitFilter] = useState<string>('all')
   const [proFilter, setProFilter] = useState<string>('all')
-  const [tab, setTab] = useState<'appointments' | 'clinic' | 'availability' | 'report' | 'adoption' | 'blog' | 'settings'>('appointments')
+  const [tab, setTab] = useState<'appointments' | 'availability' | 'report' | 'settings'>('appointments')
   const [refreshKey, setRefreshKey] = useState(0)
   const [search, setSearch] = useState('')
   const [monthCounts, setMonthCounts] = useState<Record<string, number>>({})
@@ -154,13 +154,34 @@ export default function Dashboard() {
   }, [calMonth, unitFilter, status])
 
   const updateStatus = async (id: string, newStatus: string) => {
-    if (newStatus === 'CANCELLED' && !window.confirm('Tem certeza que deseja cancelar este agendamento?')) return
+    if (newStatus === 'CANCELLED') {
+      if (!window.confirm('Tem certeza que deseja cancelar este agendamento?')) return
+      await fetch(`/api/admin/appointments/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a))
+      // Abre formulário de novo agendamento no mesmo horário/profissional
+      const appt = appointments.find(a => a.id === id)
+      if (appt) {
+        setBookingForm({ petName: '', petBreed: '', petSize: appt.petSize ?? 'small', tutorName: '', phone: '', pkg: appt.package ?? 'banho', addons: appt.addons ?? [], notes: '', isVip: false })
+        setBookingSlot({ slot: appt.appointmentTime, pro: appt.professional, unitId: appt.unitId })
+      }
+      return
+    }
     await fetch(`/api/admin/appointments/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
     })
     setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a))
+  }
+
+  const deleteAppt = async (id: string) => {
+    if (!window.confirm('Excluir este agendamento? Esta ação não pode ser desfeita.')) return
+    await fetch(`/api/appointments/${id}`, { method: 'DELETE' })
+    setAppointments(prev => prev.filter(a => a.id !== id))
   }
 
   const createManualBooking = async () => {
@@ -428,14 +449,25 @@ export default function Dashboard() {
                 <label style={labelStyle}>Telefone</label>
                 <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} disabled={editLocked} />
               </div>
-              <div>
-                <label style={labelStyle}>Pacote</label>
-                <select style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.pkg} onChange={e => setEditForm(f => ({ ...f, pkg: e.target.value }))} disabled={editLocked}>
-                  <option value="banho">Banho Tradicional</option>
-                  <option value="banho-tosa">Banho + Tosa Higiênica</option>
-                  <option value="spa">Tosa Completa + Banho</option>
-                </select>
-              </div>
+              {editingAppt?.serviceType === 'vet' ? (
+                <div style={{ gridColumn: '1/-1' }}>
+                  <label style={labelStyle}>Tipo de atendimento</label>
+                  <select style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.pkg} onChange={e => setEditForm(f => ({ ...f, pkg: e.target.value }))} disabled={editLocked}>
+                    <option value="clinico-geral">Consulta Clínico Geral</option>
+                    <option value="retorno">Retorno Veterinário</option>
+                    <option value="plantao">Consulta Plantão</option>
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label style={labelStyle}>Pacote</label>
+                  <select style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.pkg} onChange={e => setEditForm(f => ({ ...f, pkg: e.target.value }))} disabled={editLocked}>
+                    <option value="banho">Banho Tradicional</option>
+                    <option value="banho-tosa">Banho + Tosa Higiênica</option>
+                    <option value="spa">Tosa Completa + Banho</option>
+                  </select>
+                </div>
+              )}
               <div>
                 <label style={labelStyle}>Status</label>
                 <select style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))} disabled={editLocked}>
@@ -544,9 +576,9 @@ export default function Dashboard() {
 
       {/* Tabs */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 28px', display: 'flex', gap: 4, alignItems: 'center' }}>
-        {(['appointments', 'clinic', 'availability', 'report', 'adoption', 'blog'] as const).map(t => (
+        {(['appointments', 'availability', 'report'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ padding: '14px 18px', fontSize: 14, fontWeight: tab === t ? 800 : 500, color: tab === t ? '#004A99' : '#666', background: 'none', border: 'none', borderBottom: tab === t ? '2px solid #004A99' : '2px solid transparent', cursor: 'pointer' }}>
-            {t === 'appointments' ? 'Agendamentos' : t === 'clinic' ? 'Agenda Clínica' : t === 'availability' ? 'Disponibilidade' : t === 'report' ? 'Relatório de Agenda' : t === 'adoption' ? 'Adoção' : 'Blog'}
+            {t === 'appointments' ? 'Agendamentos' : t === 'availability' ? 'Disponibilidade' : 'Relatório de Agenda'}
           </button>
         ))}
         {isAdmin && (
@@ -797,6 +829,10 @@ export default function Dashboard() {
                                       }} title="Remarcar" style={{ flex: 1, padding: '5px 2px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: '1px solid #6366f1', background: 'transparent', color: '#6366f1' }}>
                                         🔄
                                       </button>
+                                      <button onClick={e => { e.stopPropagation(); deleteAppt(a.id) }} title="Excluir agendamento"
+                                        style={{ flex: 1, padding: '5px 2px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: '1px solid #fecaca', background: 'transparent', color: '#dc2626' }}>
+                                        🗑
+                                      </button>
                                     </div>
                                   </div>
                                 ))}
@@ -817,24 +853,12 @@ export default function Dashboard() {
           </>
         )}
 
-        {tab === 'clinic' && (
-          <ClinicTab isAdmin={isAdmin} userUnitId={user?.unitId} onEditAppt={openEditAppt} />
-        )}
-
         {tab === 'availability' && (
           <AvailabilityTab unitId={isAdmin ? undefined : user?.unitId} isAdmin={isAdmin} />
         )}
 
         {tab === 'report' && (
           <ReportTab isAdmin={isAdmin} userUnitId={user?.unitId} />
-        )}
-
-        {tab === 'adoption' && (
-          <AdoptionTab />
-        )}
-
-        {tab === 'blog' && (
-          <BlogTab />
         )}
 
         {tab === 'settings' && (
@@ -851,6 +875,23 @@ const CLINIC_SERVICE_LABELS: Record<string, string> = {
   exames: 'Exames',
 }
 
+const VET_SUB_LABELS: Record<string, string> = {
+  'clinico-geral': 'Consulta Clínico Geral',
+  'retorno': 'Retorno Veterinário',
+  'plantao': 'Consulta Plantão',
+}
+
+const VACCINE_LABELS: Record<string, string> = {
+  'v8v10-importada': 'V8/V10 Importada',
+  'vanguard-v10': 'Vanguard V10',
+  'felina-v3': 'Felina V3',
+  'felina-v4': 'Felina V4',
+  'felina-v5': 'Felina V5',
+  'antirrábica': 'Antirrábica',
+  'gripe': 'Gripe (Bordetella)',
+  'leishmania': 'Leishmania',
+}
+
 function ClinicTab({ isAdmin, userUnitId, onEditAppt }: { isAdmin: boolean; userUnitId?: string; onEditAppt: (a: Appointment) => void }) {
   const [date, setDate] = useState(todayISO())
   const [unitFilter, setUnitFilter] = useState(isAdmin ? 'all' : (userUnitId ?? 'all'))
@@ -865,6 +906,12 @@ function ClinicTab({ isAdmin, userUnitId, onEditAppt }: { isAdmin: boolean; user
       body: JSON.stringify({ status: newStatus }),
     })
     setRows(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a))
+  }
+
+  const deleteClinicAppt = async (id: string) => {
+    if (!window.confirm('Excluir este agendamento? Esta ação não pode ser desfeita.')) return
+    await fetch(`/api/appointments/${id}`, { method: 'DELETE' })
+    setRows(prev => prev.filter(a => a.id !== id))
   }
 
   useEffect(() => {
@@ -1023,10 +1070,14 @@ function ClinicTab({ isAdmin, userUnitId, onEditAppt }: { isAdmin: boolean; user
                           👤 {a.tutorName}
                           {a.tutorCpf && <span style={{ fontSize: 11, color: '#aaa' }}> · CPF: {a.tutorCpf}</span>}
                         </div>
-                        {/* Profissional */}
-                        {a.professional && (
-                          <div style={{ fontSize: 11, color: '#666', marginBottom: 1 }}>
-                            ✂️ {PRO_NAME_MAP[a.professional] ?? a.professional}
+                        {/* Serviço escolhido */}
+                        {a.package && (
+                          <div style={{ fontSize: 11, color: svcColor, fontWeight: 700, marginBottom: 1 }}>
+                            {svcKey === 'vet'
+                              ? (VET_SUB_LABELS[a.package] ?? a.package)
+                              : svcKey === 'vacina'
+                              ? a.package.split(',').map(v => VACCINE_LABELS[v.trim()] ?? v.trim()).join(', ')
+                              : a.package}
                           </div>
                         )}
                         {/* Unidade (admin) */}
@@ -1048,12 +1099,58 @@ function ClinicTab({ isAdmin, userUnitId, onEditAppt }: { isAdmin: boolean; user
                             R$ {Number(a.totalPrice).toFixed(2).replace('.', ',')}
                           </span>
                           <div style={{ display: 'flex', gap: 3 }}>
-                            {(['CONFIRMED', 'COMPLETED', 'CANCELLED'] as const).map(s => (
-                              <button key={s} onClick={e => { e.stopPropagation(); updateStatus(a.id, s) }} title={STATUS_LABELS[s]}
-                                style={{ width: 22, height: 22, borderRadius: 6, border: `1.5px solid ${a.status === s ? STATUS_COLORS[s] : '#e5e7eb'}`, background: a.status === s ? STATUS_COLORS[s] : '#f8fafc', cursor: a.status === s ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: a.status === s ? '#fff' : '#888' }}>
-                                {s === 'CONFIRMED' ? '✓' : s === 'COMPLETED' ? '★' : '✕'}
-                              </button>
-                            ))}
+                            <button onClick={e => { e.stopPropagation(); deleteClinicAppt(a.id) }} title="Excluir agendamento"
+                              style={{ width: 22, height: 22, borderRadius: 6, border: '1.5px solid #fecaca', background: '#fff5f5', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#dc2626' }}>
+                              🗑
+                            </button>
+                            {(['CONFIRMED', 'COMPLETED', 'CANCELLED'] as const).map(s => {
+                              if (s === 'CONFIRMED') {
+                                const unitName = UNITS.find(u => u.id === a.unitId)?.name ?? a.unitId
+                                const svcLabel = CLINIC_SERVICE_LABELS[a.serviceType ?? ''] ?? a.serviceType ?? 'Serviço'
+                                const subLabel = a.package
+                                  ? a.serviceType === 'vet'
+                                    ? ` — ${VET_SUB_LABELS[a.package] ?? a.package}`
+                                    : a.serviceType === 'vacina'
+                                    ? ` — ${a.package.split(',').map((v: string) => VACCINE_LABELS[v.trim()] ?? v.trim()).join(', ')}`
+                                    : ''
+                                  : ''
+                                const dateStr = a.appointmentDate
+                                  ? new Date(a.appointmentDate).toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza', day: '2-digit', month: '2-digit', year: 'numeric' })
+                                  : ''
+                                const waMsg = [
+                                  `Olá, ${a.tutorName}! 👋`,
+                                  ``,
+                                  `Seu agendamento na *Marreiro Pet* foi *confirmado*! ✅`,
+                                  ``,
+                                  `📋 *Serviço:* ${svcLabel}${subLabel}`,
+                                  `🐾 *Pet:* ${a.petName}`,
+                                  `📍 *Unidade:* Marreiro Pet ${unitName}`,
+                                  `📅 *Data:* ${dateStr}`,
+                                  `🕐 *Horário:* ${a.appointmentTime}`,
+                                  ``,
+                                  `Qualquer dúvida estamos à disposição. Até lá! 😊`,
+                                  ``,
+                                  `*Marreiro Pet* 🐾`,
+                                ].filter(Boolean).join('\n')
+                                const waUrl = `https://wa.me/55${a.phone.replace(/\D/g, '')}?text=${encodeURIComponent(waMsg)}`
+                                return (
+                                  <button key={s} onClick={e => {
+                                    e.stopPropagation()
+                                    if (a.status !== 'CONFIRMED') updateStatus(a.id, 'CONFIRMED')
+                                    window.open(waUrl, '_blank')
+                                  }} title="Confirmar e enviar WhatsApp ao cliente"
+                                    style={{ width: 22, height: 22, borderRadius: 6, border: `1.5px solid ${a.status === s ? STATUS_COLORS[s] : '#e5e7eb'}`, background: a.status === s ? STATUS_COLORS[s] : '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: a.status === s ? '#fff' : '#888' }}>
+                                    ✓
+                                  </button>
+                                )
+                              }
+                              return (
+                                <button key={s} onClick={e => { e.stopPropagation(); updateStatus(a.id, s) }} title={STATUS_LABELS[s]}
+                                  style={{ width: 22, height: 22, borderRadius: 6, border: `1.5px solid ${a.status === s ? STATUS_COLORS[s] : '#e5e7eb'}`, background: a.status === s ? STATUS_COLORS[s] : '#f8fafc', cursor: a.status === s ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: a.status === s ? '#fff' : '#888' }}>
+                                  {s === 'COMPLETED' ? '★' : '✕'}
+                                </button>
+                              )
+                            })}
                           </div>
                         </div>
                       </div>

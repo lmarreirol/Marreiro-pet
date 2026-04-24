@@ -6,7 +6,7 @@ const LINKS = [
   { href: '/#servicos', label: 'Serviços' },
   { href: '/#sobre', label: 'Sobre' },
   { href: '/#unidades', label: 'Unidades' },
-  { href: '/adocao', label: '❤️ Adoção', highlight: true },
+  { href: '/adocao', label: 'Adoção' },
   { href: '/dicas', label: 'Dicas' },
   { href: '/#contato', label: 'Contato' },
   { href: '/#agendar', label: 'Agendar' },
@@ -47,7 +47,7 @@ export default function Nav() {
 
           <nav className="nav-links">
             {LINKS.filter(l => l.label !== 'Agendar').map(l => (
-              <a key={l.href} href={l.href} style={l.highlight ? { color: '#EF7720', fontWeight: 800 } : undefined}>{l.label}</a>
+              <a key={l.href} href={l.href}>{l.label}</a>
             ))}
           </nav>
 
@@ -63,7 +63,6 @@ export default function Nav() {
                   <span style={{ fontSize: 11, fontWeight: 900, color: '#EF7720' }}>24 HORAS</span>
                 </span>
               </span>
-              <span className="nav-phone-number">(85) 99157-5287</span>
             </a>
 
             <a href="/#agendar" className="btn btn-primary nav-cta-btn" style={{ padding: '10px 18px', fontSize: 14 }} onClick={e => {
@@ -92,7 +91,6 @@ export default function Nav() {
               key={l.href}
               href={l.href}
               className="nav-dropdown-item"
-              style={l.highlight ? { color: '#EF7720' } : undefined}
               onClick={e => {
                 setOpen(false)
                 if (l.href.startsWith('/#')) {

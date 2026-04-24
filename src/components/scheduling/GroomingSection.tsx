@@ -184,6 +184,22 @@ export default function GroomingSection() {
 
   const update = (patch: Partial<GroomingState>) => setData(d => ({ ...d, ...patch }))
   const toggleAddon = (id: string) => setData(d => ({ ...d, addons: d.addons.includes(id) ? d.addons.filter(x => x !== id) : [...d.addons, id] }))
+  const reset = () => { setStep(0); setData(initialState); setError(null) }
+
+  useEffect(() => {
+    document.body.classList.toggle('grooming-active', data.size !== null || data.package !== null)
+    return () => document.body.classList.remove('grooming-active')
+  }, [data.size, data.package])
+
+  useEffect(() => {
+    if (data.size === null && data.package === null) return
+    const handler = (e: MouseEvent) => {
+      const wrap = document.querySelector('.grooming-wrap')
+      if (wrap && !wrap.contains(e.target as Node)) reset()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [data.size, data.package])
 
   useEffect(() => {
     const pkg = sessionStorage.getItem('preselect-package')

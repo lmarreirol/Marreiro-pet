@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import Icon from '@/components/ui/Icon'
+import { PRO_NAMES } from '@/data/professionals'
 
 const SERVICES = [
   { id: 'vet', name: 'Consulta Veterinária', sub: 'Check-up, diagnóstico', icon: 'stethoscope' as const },
@@ -36,6 +37,7 @@ const VACCINES: Record<string, { id: string; name: string; price: number; priceL
 
 const VET_SUB_SERVICES = [
   { id: 'clinico-geral', name: 'Consulta Clínico Geral', price: 80, priceLabel: 'R$ 80,00', info: '' },
+  { id: 'retorno', name: 'Retorno Veterinário', price: 0, priceLabel: 'Gratuito', info: '30 dias do atendimento anterior' },
   { id: 'plantao', name: 'Consulta Plantão', price: 120, priceLabel: 'R$ 120,00', info: '19h–07h · Domingos e feriados' },
 ]
 
@@ -54,32 +56,44 @@ const PROFESSIONALS = [
 
 const TIMES = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00']
 
-const PRO_NAMES: Record<string, string> = {
-  victor: 'Victor Lopes', daniele: 'Daniele Santos', eduarda: 'Eduarda',
-  israel: 'Israel', vitoria: 'Vitória Duraes', christian: 'Christian Fernandes',
-  andresa: 'Andresa Martins', erica: 'Erica Melo',
-  anderson: 'Anderson Correia', carla: 'Carla Janaina',
-  vitor: 'Vitor Fernandes',
-}
+const CLINICO_TIMES = (() => {
+  const slots: string[] = []
+  const blocked = new Set(['12:00', '12:30'])
+  for (let h = 7; h <= 18; h++) {
+    const hh = String(h).padStart(2, '0')
+    if (!blocked.has(`${hh}:00`)) slots.push(`${hh}:00`)
+    if (!blocked.has(`${hh}:30`)) slots.push(`${hh}:30`)
+  }
+  return slots
+})()
+
+const PLANTAO_TIMES = (() => {
+  const slots: string[] = []
+  for (let h = 19; h < 24; h++) slots.push(`${String(h).padStart(2,'0')}:00`, `${String(h).padStart(2,'0')}:30`)
+  for (let h = 0; h <= 6; h++) slots.push(`${String(h).padStart(2,'0')}:00`, `${String(h).padStart(2,'0')}:30`)
+  return slots
+})()
 
 function getNextDates(n: number) {
   const days = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
   const out = []
   const today = new Date()
-  for (let i = 1; i <= n; i++) {
+  for (let i = 0; i < n; i++) {
     const d = new Date(today)
     d.setDate(today.getDate() + i)
-    out.push({ date: d, day: d.getDate(), label: days[d.getDay()], disabled: d.getDay() === 0 })
+    out.push({ date: d, day: d.getDate(), label: i === 0 ? 'HOJE' : days[d.getDay()] })
   }
   return out
 }
 
 type DateEntry = ReturnType<typeof getNextDates>[0]
 
+const POLYVALENT_IDS = new Set(['v8v10-importada', 'vanguard-v10', 'felina-v3', 'felina-v4', 'felina-v5'])
+
 interface BookingState {
   service: string | null
   vetSubService: string | null
-  vaccine: string | null
+  vaccines: string[]
   unit: string | null
   petType: string | null
   size: string | null
@@ -90,12 +104,13 @@ interface BookingState {
   phone: string
   cpf: string
   petName: string
+  vetName: string
   notes: string
 }
 
 const initialState: BookingState = {
-  service: null, vetSubService: null, vaccine: null, unit: null, petType: null, size: null, professional: null,
-  date: null, time: null, tutorName: '', phone: '', cpf: '', petName: '', notes: '',
+  service: null, vetSubService: null, vaccines: [], unit: null, petType: null, size: null, professional: null,
+  date: null, time: null, tutorName: '', phone: '', cpf: '', petName: '', vetName: '', notes: '',
 }
 
 export default function Scheduler() {
@@ -105,9 +120,25 @@ export default function Scheduler() {
   const [error, setError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [assignedPro, setAssignedPro] = useState<string | null>(null)
-  const [availableSlots, setAvailableSlots] = useState<Record<string, number>>({}) // time → availableCount
+  const [availableSlots, setAvailableSlots] = useState<Record<string, number>>({})
   const [loadingSlots, setLoadingSlots] = useState(false)
+  const [bookedTimes, setBookedTimes] = useState<string[]>([])
   const dates = useMemo(() => getNextDates(14), [])
+
+  useEffect(() => {
+    document.body.classList.toggle('scheduler-active', data.service !== null)
+    return () => document.body.classList.remove('scheduler-active')
+  }, [data.service])
+
+  useEffect(() => {
+    if (data.service === null) return
+    const handler = (e: MouseEvent) => {
+      const wrap = document.querySelector('.schedule-wrap')
+      if (wrap && !wrap.contains(e.target as Node)) reset()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [data.service])
 
   const fetchAvailableSlots = useCallback(async (unitId: string, date: Date) => {
     setLoadingSlots(true)
@@ -137,9 +168,31 @@ export default function Scheduler() {
       setAvailableSlots({})
     }
   }, [data.professional, data.date, data.unit, fetchAvailableSlots])
+
+  useEffect(() => {
+    if (!data.date || !data.unit || !data.service || data.service === 'banho') {
+      setBookedTimes([])
+      return
+    }
+    const iso = data.date.date.toISOString().split('T')[0]
+    fetch(`/api/booked-slots?unitId=${data.unit}&date=${iso}&serviceType=${data.service}`)
+      .then(r => r.json())
+      .then(json => setBookedTimes(json.bookedTimes ?? []))
+      .catch(() => setBookedTimes([]))
+  }, [data.date, data.unit, data.service])
   const TOTAL = 4
 
   const update = (patch: Partial<BookingState>) => setData(d => ({ ...d, ...patch }))
+
+  const toggleVaccine = (id: string) => {
+    setData(d => {
+      const isPolyvalent = POLYVALENT_IDS.has(id)
+      const selected = d.vaccines.includes(id)
+      if (selected) return { ...d, vaccines: d.vaccines.filter(v => v !== id) }
+      if (isPolyvalent) return { ...d, vaccines: [...d.vaccines.filter(v => !POLYVALENT_IDS.has(v)), id] }
+      return { ...d, vaccines: [...d.vaccines, id] }
+    })
+  }
 
   const validateCpf = (cpf: string) => {
     const n = cpf.replace(/\D/g, '')
@@ -163,7 +216,7 @@ export default function Scheduler() {
     if (step === 1) {
       if (!data.petType) return false
       if (data.service === 'banho') return !!data.professional
-      if (data.service === 'vacina') return !!data.vaccine
+      if (data.service === 'vacina') return data.vaccines.length > 0
       return true
     }
     if (step === 2) return data.date && data.time
@@ -171,8 +224,12 @@ export default function Scheduler() {
     return false
   }
 
-  const next = () => { if (step < TOTAL) setStep(step + 1) }
-  const back = () => setStep(s => Math.max(0, s - 1))
+  const isRetorno = data.service === 'vet' && data.vetSubService === 'retorno'
+  const isPlantao = data.service === 'vet' && data.vetSubService === 'plantao'
+  const isClinico = data.service === 'vet' && data.vetSubService === 'clinico-geral'
+  const activeTimes = isPlantao ? PLANTAO_TIMES : isClinico ? CLINICO_TIMES : TIMES
+  const next = () => { if (step < TOTAL) setStep(isRetorno && step === 0 ? 2 : step + 1) }
+  const back = () => setStep(s => isRetorno && s === 2 ? 0 : Math.max(0, s - 1))
   const reset = () => { setStep(0); setData(initialState); setSubmitted(false); setError(null) }
 
   const handleConfirm = async () => {
@@ -184,7 +241,7 @@ export default function Scheduler() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serviceType: data.service,
-          package: data.vetSubService ?? data.vaccine ?? null,
+          package: data.vetSubService ?? (data.vaccines.length > 0 ? data.vaccines.join(',') : null) ?? null,
           unitId: data.unit,
           professional: data.professional ?? null,
           petName: data.petName,
@@ -197,8 +254,7 @@ export default function Scheduler() {
           time: data.time,
           totalPrice:
             VET_SUB_SERVICES.find(s => s.id === data.vetSubService)?.price ??
-            (VACCINES[data.petType ?? ''] ?? []).find(v => v.id === data.vaccine)?.price ??
-            0,
+            data.vaccines.reduce((sum, id) => sum + ((VACCINES[data.petType ?? ''] ?? []).find(v => v.id === id)?.price ?? 0), 0),
           isVip: false,
         }),
       })
@@ -229,7 +285,8 @@ export default function Scheduler() {
       `*Pet:* ${data.petName}${petSize ? ` (${petSize})` : ''}`,
       `*Tutor:* ${data.tutorName}`,
       `*Data:* ${dateStr} às ${data.time}`,
-      proName ? `*Profissional:* ${proName}` : '',
+      proName && data.service === 'banho' ? `*Profissional:* ${proName}` : '',
+      data.vetName ? `*Veterinário do retorno:* ${data.vetName}` : '',
       data.notes ? `*Observações:* ${data.notes}` : '',
     ].filter(Boolean).join('\n')
     const waUrl = `https://wa.me/${unit?.whatsapp}?text=${encodeURIComponent(waMsg)}`
@@ -245,7 +302,7 @@ export default function Scheduler() {
             <div className="summary-row"><span className="k">Serviço</span><span className="v">{service?.name}</span></div>
             <div className="summary-row"><span className="k">Unidade</span><span className="v">{unit?.name}</span></div>
             <div className="summary-row"><span className="k">Data</span><span className="v">{dateStr} às {data.time}</span></div>
-            {assignedPro && <div className="summary-row"><span className="k">Profissional</span><span className="v">{PRO_NAMES[assignedPro] ?? assignedPro}</span></div>}
+            {assignedPro && data.service === 'banho' && <div className="summary-row"><span className="k">Profissional</span><span className="v">{PRO_NAMES[assignedPro] ?? assignedPro}</span></div>}
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 14, flexWrap: 'wrap' }}>
             <a href={waUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary"><Icon name="wa" size={16} /> Confirmar pelo WhatsApp</a>
@@ -257,6 +314,7 @@ export default function Scheduler() {
   }
 
   return (
+    <>
     <div className="schedule-form" id="agendar">
       <div className="stepper">
         {[0, 1, 2, 3].map(i => (
@@ -314,39 +372,49 @@ export default function Scheduler() {
           <div className="form-title">{data.service === 'banho' ? 'Porte do pet & pacote' : 'Quem é o pet?'}</div>
           <div className="form-sub">{data.service === 'banho' ? 'O preço varia conforme o porte. Comece selecionando o tamanho do seu pet.' : 'Vamos adequar o atendimento ao seu bichinho.'}</div>
           <div className="pet-type-grid">
-            <button className={`pet-pill ${data.petType === 'dog' ? 'selected' : ''}`} onClick={() => update({ petType: 'dog', vaccine: null })}>
+            <button className={`pet-pill ${data.petType === 'dog' ? 'selected' : ''}`} onClick={() => update({ petType: 'dog', vaccines: [] })}>
               <div className="pet-pill-glyph">🐕</div><div className="pet-pill-name">Cachorro</div>
             </button>
-            <button className={`pet-pill ${data.petType === 'cat' ? 'selected' : ''}`} onClick={() => update({ petType: 'cat', vaccine: null })}>
+            <button className={`pet-pill ${data.petType === 'cat' ? 'selected' : ''}`} onClick={() => update({ petType: 'cat', vaccines: [] })}>
               <div className="pet-pill-glyph">🐈</div><div className="pet-pill-name">Gato</div>
             </button>
           </div>
-          <div className="form-row" style={{ marginTop: 20 }}>
-            <div>
-              <div className="label" style={{ marginBottom: 6 }}>Porte</div>
-              <select className="select" value={data.size || ''} onChange={e => update({ size: e.target.value })}>
-                <option value="">Selecione</option>
-                <option value="small">Pequeno (até 10kg)</option>
-                <option value="medium">Médio (10kg a 20kg)</option>
-                <option value="large">Grande (acima de 20kg)</option>
-              </select>
+          {data.service === 'banho' && (
+            <div className="form-row" style={{ marginTop: 20 }}>
+              <div>
+                <div className="label" style={{ marginBottom: 6 }}>Porte</div>
+                <select className="select" value={data.size || ''} onChange={e => update({ size: e.target.value })}>
+                  <option value="">Selecione</option>
+                  <option value="small">Pequeno (até 10kg)</option>
+                  <option value="medium">Médio (10kg a 20kg)</option>
+                  <option value="large">Grande (acima de 20kg)</option>
+                </select>
+              </div>
             </div>
-          </div>
+          )}
           {data.service === 'vacina' && data.petType && (
             <div style={{ marginTop: 22 }}>
-              <div className="label" style={{ marginBottom: 10 }}>💉 Escolha a vacina</div>
+              <div className="label" style={{ marginBottom: 4 }}>💉 Escolha a(s) vacina(s)</div>
+              <div style={{ fontSize: 12, color: '#888', marginBottom: 10 }}>Apenas uma polivalente por vez. As demais podem ser combinadas.</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {(VACCINES[data.petType] ?? []).map(v => {
-                  const selected = data.vaccine === v.id
+                  const selected = data.vaccines.includes(v.id)
+                  const isPolyvalent = POLYVALENT_IDS.has(v.id)
+                  const otherPolySelected = isPolyvalent && data.vaccines.some(id => POLYVALENT_IDS.has(id) && id !== v.id)
                   return (
-                    <button key={v.id} type="button" onClick={() => update({ vaccine: v.id })}
-                      style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 16px', borderRadius: 12, border: `2px solid ${selected ? '#004A99' : '#e5e7eb'}`, background: selected ? '#EFF6FF' : '#fff', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', width: '100%' }}>
+                    <button key={v.id} type="button" onClick={() => toggleVaccine(v.id)}
+                      style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 16px', borderRadius: 12, border: `2px solid ${selected ? '#004A99' : otherPolySelected ? '#f1c0c0' : '#e5e7eb'}`, background: selected ? '#EFF6FF' : otherPolySelected ? '#fff8f8' : '#fff', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', width: '100%', opacity: otherPolySelected ? 0.55 : 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 14, fontWeight: selected ? 700 : 600, color: selected ? '#004A99' : '#1a1a1a' }}>{v.name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ width: 16, height: 16, borderRadius: 4, border: `2px solid ${selected ? '#004A99' : '#d1d5db'}`, background: selected ? '#004A99' : '#fff', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                            {selected && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: selected ? 700 : 600, color: selected ? '#004A99' : '#1a1a1a' }}>{v.name}</span>
+                        </div>
                         <span style={{ fontSize: 14, fontWeight: 700, color: selected ? '#004A99' : '#EF7720', flexShrink: 0, marginLeft: 12 }}>{v.priceLabel}</span>
                       </div>
                       {v.diseases && v.diseases.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                        <div className="vaccine-diseases">
                           {v.diseases.map(d => (
                             <span key={d} style={{ fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20, background: selected ? '#dbeafe' : '#f1f5f9', color: selected ? '#1e40af' : '#555', border: `1px solid ${selected ? '#bfdbfe' : '#e5e7eb'}` }}>{d}</span>
                           ))}
@@ -356,6 +424,11 @@ export default function Scheduler() {
                   )
                 })}
               </div>
+              {data.vaccines.length > 0 && (
+                <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: '#004A99' }}>
+                  Total: R$ {data.vaccines.reduce((sum, id) => sum + ((VACCINES[data.petType ?? ''] ?? []).find(v => v.id === id)?.price ?? 0), 0).toFixed(2).replace('.', ',')}
+                </div>
+              )}
             </div>
           )}
 
@@ -389,7 +462,7 @@ export default function Scheduler() {
           <div className="label" style={{ marginBottom: 10 }}>Data</div>
           <div className="date-grid" style={{ marginBottom: 20 }}>
             {dates.map((d, i) => (
-              <button key={i} className={`date-cell ${data.date?.day === d.day ? 'selected' : ''}`} disabled={d.disabled} onClick={() => update({ date: d, time: null })}>
+              <button key={i} className={`date-cell ${data.date?.day === d.day ? 'selected' : ''}`} disabled={d.date.getDay() === 0 && data.unit !== 'caucaia'} onClick={() => update({ date: d, time: null })}>
                 <div className="date-cell-day">{d.label}</div>{d.day}
               </button>
             ))}
@@ -401,10 +474,17 @@ export default function Scheduler() {
             )}
           </div>
           <div className="time-grid">
-            {TIMES.map(t => {
+            {activeTimes.map(t => {
               const isAny = data.professional === 'any'
               const hasAvailability = !isAny || (availableSlots[t] ?? 0) > 0
-              const disabled = !data.date || !hasAvailability || loadingSlots
+              const isToday = data.date ? data.date.date.toDateString() === new Date().toDateString() : false
+              const isPast = isToday && (() => {
+                const now = new Date()
+                const [h, m] = t.split(':').map(Number)
+                return h * 60 + m <= now.getHours() * 60 + now.getMinutes()
+              })()
+              const isBooked = bookedTimes.includes(t)
+              const disabled = !data.date || !hasAvailability || loadingSlots || isPast || isBooked
               return (
                 <button key={t} className={`time-slot ${data.time === t ? 'selected' : ''}`} disabled={disabled} onClick={() => update({ time: t })}
                   title={isAny && data.date && !hasAvailability ? 'Sem profissional disponível neste horário' : ''}>
@@ -433,7 +513,7 @@ export default function Scheduler() {
           <div className="summary-box">
             <div className="summary-row"><span className="k">Serviço</span><span className="v">{SERVICES.find(s => s.id === data.service)?.name}</span></div>
             {data.vetSubService && <div className="summary-row"><span className="k">Tipo</span><span className="v">{VET_SUB_SERVICES.find(s => s.id === data.vetSubService)?.name}</span></div>}
-            {data.vaccine && <div className="summary-row"><span className="k">Vacina</span><span className="v">{(VACCINES[data.petType ?? ''] ?? []).find(v => v.id === data.vaccine)?.name}</span></div>}
+            {data.vaccines.length > 0 && <div className="summary-row"><span className="k">Vacina(s)</span><span className="v">{data.vaccines.map(id => (VACCINES[data.petType ?? ''] ?? []).find(v => v.id === id)?.name).filter(Boolean).join(', ')}</span></div>}
             <div className="summary-row"><span className="k">Unidade</span><span className="v">Marreiro {UNITS.find(u => u.id === data.unit)?.name}</span></div>
             <div className="summary-row"><span className="k">Data & horário</span><span className="v">{data.date?.day}/{((data.date?.date.getMonth() ?? 0) + 1).toString().padStart(2, '0')} às {data.time}</span></div>
           </div>
@@ -458,6 +538,12 @@ export default function Scheduler() {
               <input className="input" placeholder="Ex: Mel" value={data.petName} onChange={e => update({ petName: e.target.value })} />
             </div>
           </div>
+          {isRetorno && (
+            <div className="form-row">
+              <div className="label" style={{ marginBottom: 6 }}>Veterinário do retorno (opcional)</div>
+              <input className="input" placeholder="Ex: Dr. João Silva" value={data.vetName} onChange={e => update({ vetName: e.target.value })} />
+            </div>
+          )}
           <div className="form-row">
             <div className="label" style={{ marginBottom: 6 }}>Observações (opcional)</div>
             <textarea className="textarea" placeholder="Alergias, medicamentos, comportamento..." value={data.notes} onChange={e => update({ notes: e.target.value })} />
@@ -489,5 +575,7 @@ export default function Scheduler() {
         )}
       </div>
     </div>
+    </>
   )
 }
+

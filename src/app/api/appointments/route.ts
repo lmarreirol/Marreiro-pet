@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import type { AppointmentPayload } from '@/types'
-
-const PROFESSIONALS_BY_UNIT: Record<string, string[]> = {
-  caucaia:    ['victor', 'daniele', 'eduarda', 'israel'],
-  pecem:      ['vitoria', 'christian'],
-  taiba:      ['andresa', 'erica'],
-  saogoncalo: ['anderson', 'carla'],
-}
+import { PROFESSIONALS_BY_UNIT } from '@/data/professionals'
 
 async function autoAssignProfessional(unitId: string, date: string, time: string): Promise<string | null> {
   const professionals = PROFESSIONALS_BY_UNIT[unitId]

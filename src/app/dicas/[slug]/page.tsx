@@ -38,7 +38,13 @@ export default function ArtigoPage() {
   useEffect(() => {
     fetch(`/api/blog?slug=${slug}`)
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
-      .then(d => { setPost(d); setLoading(false) })
+      .then(d => {
+        setPost(d)
+        setLoading(false)
+        document.title = `${d.title} — Marreiro Pet`
+        const desc = document.querySelector('meta[name="description"]')
+        if (desc) desc.setAttribute('content', d.excerpt)
+      })
       .catch(() => { setNotFound(true); setLoading(false) })
   }, [slug])
 

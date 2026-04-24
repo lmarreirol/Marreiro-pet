@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
-const PROFESSIONALS_BY_UNIT: Record<string, string[]> = {
-  caucaia:    ['victor', 'daniele', 'eduarda', 'israel'],
-  pecem:      ['vitoria', 'christian'],
-  taiba:      ['andresa', 'erica'],
-  saogoncalo: ['anderson', 'carla'],
-}
+import { PROFESSIONALS_BY_UNIT } from '@/data/professionals'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)

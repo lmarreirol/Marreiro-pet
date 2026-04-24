@@ -31,6 +31,7 @@ const services = [
     title: 'Delivery de Ração',
     desc: 'Receba a ração do seu pet em casa, sem sair do sofá.',
     items: ['Entrega em até 2h', 'Ração premium', 'Assinatura mensal'],
+    highlight: true,
     message: 'Olá, gostaria de pedir delivery de ração!',
   },
   {
@@ -45,6 +46,7 @@ const services = [
     title: 'Pet Shop',
     desc: 'Rações, acessórios e brinquedos selecionados para cães e gatos.',
     items: ['Rações premium', 'Brinquedos & camas', 'Coleiras e guias'],
+    highlight: true,
     message: 'Olá, gostaria de saber mais sobre o pet shop!',
   },
 ]

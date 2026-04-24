@@ -20,7 +20,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!user) return null
         const ok = await bcrypt.compare(String(credentials.password), user.password)
         if (!ok) return null
-        return { id: user.id, name: user.name, username: user.username, role: user.role, unitId: user.unitId }
+        return { id: user.id, name: user.name, username: user.username, role: user.role, unitId: user.unitId, tenantId: user.tenantId }
       },
     }),
   ],

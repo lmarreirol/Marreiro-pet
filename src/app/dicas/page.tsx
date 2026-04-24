@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Nav from '@/components/sections/Nav'
 import Footer from '@/components/sections/Footer'
 
@@ -76,8 +77,15 @@ export default function DicasPage() {
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 60, color: '#888' }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>📝</div>
-              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Nenhum artigo publicado ainda</div>
-              <div style={{ fontSize: 14 }}>Em breve novos conteúdos!</div>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
+                {tag === 'Todos' ? 'Nenhum artigo publicado ainda' : `Nenhum artigo em "${tag}"`}
+              </div>
+              <div style={{ fontSize: 14, marginBottom: 20 }}>Em breve novos conteúdos!</div>
+              {tag !== 'Todos' && (
+                <button onClick={() => setTag('Todos')} style={{ padding: '10px 24px', borderRadius: 30, background: '#004A99', color: '#fff', border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                  Ver todos os artigos
+                </button>
+              )}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 28 }}>
@@ -88,7 +96,7 @@ export default function DicasPage() {
                 >
                   <div style={{ position: 'relative', height: 200, background: COVER_GRADIENT[post.coverColor] ?? COVER_GRADIENT.orange, overflow: 'hidden' }}>
                     {post.imageUrl && (
-                      <img src={post.imageUrl} alt={post.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image src={post.imageUrl} alt={post.title} fill style={{ objectFit: 'cover' }} unoptimized />
                     )}
                     {!post.imageUrl && <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 14px)' }} />}
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 60%)' }} />
