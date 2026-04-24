@@ -59,7 +59,7 @@ export default function ArtigoPage() {
             {/* Cover */}
             <div style={{ position: 'relative', height: 360, background: COVER_GRADIENT[post.coverColor] ?? COVER_GRADIENT.orange, overflow: 'hidden' }}>
               {post.imageUrl && (
-                <img src={post.imageUrl} alt={post.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={post.imageUrl} alt={post.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }} />
               )}
               {!post.imageUrl && <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 14px)' }} />}
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
