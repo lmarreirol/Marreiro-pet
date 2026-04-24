@@ -53,7 +53,7 @@ export default function Footer() {
           <span className="footer-tarly">
             <span>Desenvolvido por</span>
             <a href="https://tarly.com.br" target="_blank" rel="noopener noreferrer" aria-label="Tarly">
-              <Image src="/tarly-logo.png" alt="Tarly" width={100} height={34} style={{ objectFit: 'contain' }} />
+              <Image src="/tarly-logo.png" alt="Tarly" width={110} height={37} style={{ objectFit: 'contain' }} />
             </a>
           </span>
           <span>CNPJ 43.457.292/0001-07</span>
