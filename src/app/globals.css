@@ -75,33 +75,37 @@ img { max-width: 100%; display: block; }
 .nav-cta { display: flex; gap: 10px; align-items: center; }
 .nav-phone { font-weight: 700; color: var(--blue); font-size: 14px; display: flex; align-items: center; gap: 6px; }
 
+.nav-hamburger-wrap { display: none; position: relative; }
 .nav-hamburger {
-  display: none; flex-direction: column; justify-content: center; gap: 5px;
+  display: flex; flex-direction: column; justify-content: center; gap: 5px;
   width: 40px; height: 40px; background: none; border: none; cursor: pointer; padding: 6px;
 }
-.ham-bar {
-  display: block; width: 24px; height: 2.5px; background: var(--blue); border-radius: 2px;
-  transition: transform .25s, opacity .25s;
+.ham-bar { display: block; width: 24px; height: 2.5px; background: var(--blue); border-radius: 2px; }
+.nav-dropdown {
+  position: absolute; top: calc(100% + 12px); right: 0;
+  background: #fff; border-radius: 14px; min-width: 200px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15); overflow: hidden;
+  animation: dropdown-pop .18s ease;
+  z-index: 999;
 }
-.nav-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 998;
+@keyframes dropdown-pop {
+  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-.nav-drawer {
-  position: fixed; top: 0; right: 0; height: 100dvh; width: 280px;
-  background: #fff; z-index: 999; box-shadow: -4px 0 24px rgba(0,0,0,0.12);
-  transform: translateX(100%); transition: transform .28s cubic-bezier(.4,0,.2,1);
+.nav-dropdown-item {
+  display: block; padding: 13px 20px; font-size: 15px; font-weight: 700;
+  color: var(--ink); text-decoration: none; border-bottom: 1px solid #f5f5f5;
+  transition: background .15s;
 }
-.nav-drawer.open { transform: translateX(0); }
-.nav-drawer-inner { padding: 88px 28px 32px; display: flex; flex-direction: column; gap: 4px; height: 100%; overflow-y: auto; }
-.nav-drawer-link { font-size: 17px; font-weight: 700; color: var(--ink); padding: 12px 0; border-bottom: 1px solid #f5f5f5; text-decoration: none; }
-.nav-drawer-link:last-child { border-bottom: none; }
+.nav-dropdown-item:last-child { border-bottom: none; }
+.nav-dropdown-item:hover { background: #f8fafc; }
 
 @media (max-width: 960px) {
   .nav-links { display: none; }
   .nav-phone { display: none; }
   .nav-phone-number { display: none; }
   .nav-cta-btn { display: none; }
-  .nav-hamburger { display: flex; }
+  .nav-hamburger-wrap { display: block; }
 }
 
 .hero {
