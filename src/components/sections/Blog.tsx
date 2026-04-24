@@ -9,6 +9,7 @@ type Post = {
   excerpt: string
   coverColor: string
   readTime: string
+  imageUrl?: string | null
 }
 
 const COVER_GRADIENT: Record<string, string> = {
@@ -48,9 +49,8 @@ export default function Blog() {
         <div className="blog-grid">
           {displayPosts.map((p) => (
             <article className="blog-card" key={p.id} style={{ cursor: p.slug ? 'pointer' : 'default' }} onClick={() => p.slug && (window.location.href = `/dicas/${p.slug}`)}>
-              <div className="blog-cover" style={{ background: COVER_GRADIENT[p.coverColor] ?? COVER_GRADIENT.orange }}>
-                <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 14px)' }} />
-                <span className="blog-cover-label" style={{ display: 'none' }} />
+              <div className="blog-cover" style={p.imageUrl ? { backgroundImage: `url(${p.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: COVER_GRADIENT[p.coverColor] ?? COVER_GRADIENT.orange }}>
+                {!p.imageUrl && <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 14px)' }} />}
               </div>
               <div className="blog-body">
                 <span className="blog-tag">{p.tag}</span>
