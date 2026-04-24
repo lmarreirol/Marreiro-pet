@@ -762,7 +762,7 @@ img { max-width: 100%; display: block; }
 }
 .footer-grid {
   display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .footer-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
 .footer-logo img { height: 48px; width: auto; filter: brightness(1.1); }
