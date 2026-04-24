@@ -786,10 +786,7 @@ img { max-width: 100%; display: block; }
   padding-top: 24px; display: flex; justify-content: space-between;
   font-size: 13px; flex-wrap: wrap; gap: 10px;
 }
-.footer-tarly {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  padding: 40px 0 24px; font-size: 13px; color: rgba(255,255,255,0.4);
-}
+.footer-tarly { display: flex; align-items: center; gap: 6px; }
 .footer-tarly a { display: flex; align-items: center; opacity: 0.75; transition: opacity 0.2s; }
 .footer-tarly a:hover { opacity: 1; }
 .footer-tarly img { filter: brightness(0) invert(1); }

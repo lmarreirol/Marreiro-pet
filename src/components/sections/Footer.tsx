@@ -48,15 +48,15 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-        <div className="footer-tarly">
-          <span>Desenvolvido por</span>
-          <a href="https://tarly.com.br" target="_blank" rel="noopener noreferrer" aria-label="Tarly">
-            <Image src="/tarly-logo.png" alt="Tarly" width={150} height={50} style={{ objectFit: 'contain' }} />
-          </a>
-        </div>
         <div className="footer-bottom">
           <span>© 2026 Marreiro Pet · Todos os direitos reservados</span>
           <span>CNPJ 43.457.292/0001-07</span>
+          <span className="footer-tarly">
+            <span>Desenvolvido por</span>
+            <a href="https://tarly.com.br" target="_blank" rel="noopener noreferrer" aria-label="Tarly">
+              <Image src="/tarly-logo.png" alt="Tarly" width={60} height={20} style={{ objectFit: 'contain' }} />
+            </a>
+          </span>
         </div>
       </div>
     </footer>
