@@ -36,6 +36,7 @@ export default function Footer() {
               <li><a href="#blog">Dicas</a></li>
               <li><a href="#contato">Contato</a></li>
               <li><a href="#agendar">Agendar</a></li>
+              <li><a href="/adocao">❤️ Adoção</a></li>
             </ul>
           </div>
           <div>
