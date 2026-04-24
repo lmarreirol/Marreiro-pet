@@ -55,7 +55,7 @@ export default function Footer() {
         <div className="footer-tarly">
           <span>Desenvolvido por</span>
           <a href="https://tarly.com.br" target="_blank" rel="noopener noreferrer" aria-label="Tarly">
-            <Image src="/tarly-logo.png" alt="Tarly" width={130} height={44} style={{ objectFit: 'contain' }} />
+            <Image src="/tarly-logo.png" alt="Tarly" width={110} height={36} style={{ objectFit: 'contain', objectPosition: 'center' }} />
           </a>
         </div>
       </div>
