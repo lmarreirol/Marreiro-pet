@@ -178,7 +178,7 @@ export default function Dashboard() {
       // Abre formulário de novo agendamento no mesmo horário/profissional
       const appt = appointments.find(a => a.id === id)
       if (appt) {
-        setBookingForm({ petName: '', petBreed: '', petSize: appt.petSize ?? 'small', tutorName: '', phone: '', pkg: appt.package ?? 'banho', addons: appt.addons ?? [], notes: '', isVip: false })
+        setBookingForm({ petName: '', petBreed: '', petSize: appt.petSize ?? 'small', tutorName: '', phone: '', cpf: '', pkg: appt.package ?? 'banho', addons: appt.addons ?? [], notes: '', isVip: false })
         setBookingSlot({ slot: appt.appointmentTime, pro: appt.professional, unitId: appt.unitId })
       }
       return
@@ -238,7 +238,7 @@ export default function Dashboard() {
     }
     setBookingSaving(false)
     setBookingSlot(null)
-    setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [], notes: '', isVip: false })
+    setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [], notes: '', isVip: false })
     setRefreshKey(k => k + 1)
   }
 
@@ -744,8 +744,8 @@ export default function Dashboard() {
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => { const dt = new Date(date+'T12:00:00'); dt.setDate(dt.getDate()-1); const iso = dt.toISOString().split('T')[0]; setDate(iso); setCalMonth(iso.substring(0,7)) }} style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>‹</button>
                     <button onClick={() => { const dt = new Date(date+'T12:00:00'); dt.setDate(dt.getDate()+1); const iso = dt.toISOString().split('T')[0]; setDate(iso); setCalMonth(iso.substring(0,7)) }} style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>›</button>
-                    <button onClick={() => { const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'); setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [], notes: '', isVip: false }); setBookingSlot({ slot: '', pro: null, unitId: u }) }} title="Novo agendamento" style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#004A99', color: '#fff', cursor: 'pointer', fontSize: 20, fontWeight: 900, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-                    <button onClick={() => { const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'); setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [], notes: '', isVip: true }); setBookingSlot({ slot: '', pro: null, unitId: u }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 800 }}>
+                    <button onClick={() => { const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'); setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [], notes: '', isVip: false }); setBookingSlot({ slot: '', pro: null, unitId: u }) }} title="Novo agendamento" style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#004A99', color: '#fff', cursor: 'pointer', fontSize: 20, fontWeight: 900, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                    <button onClick={() => { const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'); setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [], notes: '', isVip: true }); setBookingSlot({ slot: '', pro: null, unitId: u }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 800 }}>
                       ⭐ Encaixe VIP
                     </button>
                   </div>
