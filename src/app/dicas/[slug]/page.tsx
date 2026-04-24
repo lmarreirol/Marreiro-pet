@@ -59,11 +59,16 @@ export default function ArtigoPage() {
             {/* Cover */}
             <div style={{ position: 'relative', height: 360, background: COVER_GRADIENT[post.coverColor] ?? COVER_GRADIENT.orange, overflow: 'hidden' }}>
               {post.imageUrl && (
-                <img src={post.imageUrl} alt={post.title} style={{ position: 'absolute', inset: -8, width: 'calc(100% + 16px)', height: 'calc(100% + 16px)', objectFit: 'cover', objectPosition: 'center 20%', filter: 'blur(6px) brightness(1.15)' }} />
+                <>
+                  {/* fundo desfocado */}
+                  <img src={post.imageUrl} alt="" aria-hidden style={{ position: 'absolute', inset: -10, width: 'calc(100% + 20px)', height: 'calc(100% + 20px)', objectFit: 'cover', objectPosition: 'center 20%', filter: 'blur(10px) brightness(1.2) saturate(0.8)' }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(173,214,230,0.35)' }} />
+                  {/* imagem nítida por cima */}
+                  <img src={post.imageUrl} alt={post.title} style={{ position: 'absolute', inset: 0, height: '100%', width: '100%', objectFit: 'contain', objectPosition: 'center 20%' }} />
+                </>
               )}
-              {post.imageUrl && <div style={{ position: 'absolute', inset: 0, background: 'rgba(173,214,230,0.45)' }} />}
               {!post.imageUrl && <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 14px)' }} />}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,50,100,0.65) 0%, rgba(0,80,140,0.25) 60%, transparent 100%)' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,50,100,0.65) 0%, rgba(0,80,140,0.1) 50%, transparent 100%)' }} />
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: '0 24px 40px' }}>
                 <div style={{ maxWidth: 760, width: '100%' }}>
                   <span style={{ display: 'inline-block', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: 12, fontWeight: 800, padding: '4px 12px', borderRadius: 20, marginBottom: 12, letterSpacing: 0.5 }}>
