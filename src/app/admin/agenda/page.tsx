@@ -128,18 +128,19 @@ export default function AgendaPage() {
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Toolbar */}
-        <div style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '14px 1.5rem', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           {/* Date nav */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button onClick={() => changeDate(-1)} style={navBtn}>‹</button>
-            <button onClick={() => setDateStr(toDateLocal(new Date()))} style={{ ...navBtn, background: isToday ? '#f97316' : '#f3f4f6', color: isToday ? 'white' : '#374151', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700 }}>Hoje</button>
-            <button onClick={() => changeDate(1)} style={navBtn}>›</button>
-            <span style={{ fontWeight: 700, color: '#111827', fontSize: '0.95rem', textTransform: 'capitalize', marginLeft: 4 }}>
-              {formatDateLabel(dateStr)}
+            <span style={{ fontWeight: 800, color: '#111827', fontSize: '0.95rem', textTransform: 'capitalize', minWidth: 80, textAlign: 'center' }}>
+              {formatDateLabel(dateStr).split(',')[0]}
             </span>
+            <button onClick={() => changeDate(1)} style={navBtn}>›</button>
+            <input type="date" value={dateStr} onChange={e => setDateStr(e.target.value)} style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13 }} />
+            <button onClick={() => setDateStr(toDateLocal(new Date()))} style={{ ...navBtn, background: isToday ? '#3B82F6' : '#f3f4f6', color: isToday ? 'white' : '#374151', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, width: 'auto' }}>Hoje</button>
           </div>
 
-          <div style={{ flex: 1 }} />
+          <div style={{ width: 1, height: 32, background: '#e5e7eb', flexShrink: 0 }} />
 
           {/* Filters */}
           <select value={unitFilter} onChange={e => setUnitFilter(e.target.value)} style={selectStyle}>
@@ -152,9 +153,24 @@ export default function AgendaPage() {
             <option value="vet">🩺 Clínica</option>
           </select>
 
-          {/* Count */}
-          <div style={{ background: '#f3f4f6', borderRadius: 8, padding: '4px 12px', fontSize: '0.8rem', fontWeight: 700, color: '#374151' }}>
-            {appts.length} agendamentos
+          <div style={{ width: 1, height: 32, background: '#e5e7eb', flexShrink: 0 }} />
+
+          {/* Resumo de status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            {Object.entries(STATUS_LABEL).map(([s, label]) => {
+              const count = appts.filter(a => a.status === s).length
+              return (
+                <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_COLOR[s] }} />
+                  <span style={{ fontSize: 12, color: '#777' }}>{label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: count > 0 ? STATUS_COLOR[s] : '#ccc' }}>{count}</span>
+                </div>
+              )
+            })}
+            <div style={{ borderLeft: '1px solid #e5e7eb', paddingLeft: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>Total</span>
+              <span style={{ fontSize: 14, fontWeight: 900, color: '#3B82F6' }}>{appts.length}</span>
+            </div>
           </div>
         </div>
 

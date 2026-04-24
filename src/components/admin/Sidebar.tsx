@@ -3,18 +3,19 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 // Paleta Tarly
 const C = {
-  bg:        '#0A1930',   // navy fundo
+  bg:        '#031544',   // azul marinho profundo
   border:    'rgba(255,255,255,0.07)',
-  active:    '#004A99',   // azul primário
+  active:    '#3B82F6',   // azul tech
   activeText:'#ffffff',
-  accent:    '#EF7720',   // laranja
+  accent:    '#A855F7',   // roxo inovação
   text:      'rgba(255,255,255,0.55)',
   textHover: 'rgba(255,255,255,0.85)',
-  section:   'rgba(255,255,255,0.28)',
+  section:   '#64748B',   // cinza institucional
   toggle:    'rgba(255,255,255,0.25)',
   userBg:    'rgba(255,255,255,0.06)',
 }
@@ -45,23 +46,63 @@ const NAV_WIP = [
   { href: '/admin/tenants',    icon: '⊡', label: 'Tenants', adminOnly: true },
 ]
 
-function NavLink({ item, collapsed, active }: { item: { href: string; icon: string; label: string }; collapsed: boolean; active: boolean }) {
-  return (
-    <Link href={item.href} title={collapsed ? item.label : undefined} style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: collapsed ? '10px 0' : '9px 12px',
-      justifyContent: collapsed ? 'center' : 'flex-start',
-      borderRadius: 7, textDecoration: 'none',
-      background: active ? C.active : 'transparent',
-      color: active ? C.activeText : C.text,
-      fontWeight: active ? 600 : 400,
-      fontSize: '0.85rem',
-      transition: 'all 0.15s',
-      borderLeft: active ? `3px solid ${C.accent}` : '3px solid transparent',
+function Tooltip({ label, anchorRef }: { label: string; anchorRef: React.RefObject<HTMLSpanElement | null> }) {
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  useEffect(() => {
+    if (anchorRef.current) {
+      const r = anchorRef.current.getBoundingClientRect()
+      setPos({ top: r.top + r.height / 2, left: r.right + 10 })
+    }
+  }, [anchorRef])
+  if (typeof document === 'undefined') return null
+  return createPortal(
+    <span style={{
+      position: 'fixed', top: pos.top, left: pos.left,
+      transform: 'translateY(-50%)',
+      background: '#031544', color: '#fff',
+      fontSize: '0.78rem', fontWeight: 600, whiteSpace: 'nowrap',
+      padding: '5px 12px', borderRadius: 8,
+      boxShadow: '0 4px 20px rgba(59,130,246,0.2)',
+      border: '1px solid rgba(59,130,246,0.2)',
+      pointerEvents: 'none', zIndex: 9999,
+      opacity: 0, animation: 'tooltipIn 0.18s ease forwards',
     }}>
-      <span style={{ fontSize: 15, flexShrink: 0, color: active ? C.accent : C.text }}>{item.icon}</span>
-      {!collapsed && <span>{item.label}</span>}
-    </Link>
+      <span style={{
+        position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)',
+        borderWidth: 5, borderStyle: 'solid',
+        borderColor: 'transparent #031544 transparent transparent',
+      }} />
+      {label}
+    </span>,
+    document.body
+  )
+}
+
+function NavLink({ item, collapsed, active }: { item: { href: string; icon: string; label: string }; collapsed: boolean; active: boolean }) {
+  const [hovered, setHovered] = useState(false)
+  const ref = useRef<HTMLSpanElement>(null)
+  return (
+    <span ref={ref} style={{ position: 'relative', display: 'block' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <Link href={item.href} style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: collapsed ? '10px 0' : '9px 12px',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        borderRadius: 7, textDecoration: 'none',
+        background: active ? 'rgba(59,130,246,0.12)' : 'transparent',
+        color: active ? '#fff' : C.text,
+        fontWeight: active ? 600 : 400,
+        fontSize: '0.85rem',
+        transition: 'all 0.15s',
+        borderLeft: active ? `3px solid #A855F7` : '3px solid transparent',
+      }}>
+        <span style={{ fontSize: 15, flexShrink: 0, color: active ? '#A855F7' : C.text }}>{item.icon}</span>
+        {!collapsed && <span>{item.label}</span>}
+      </Link>
+      {collapsed && hovered && <Tooltip label={item.label} anchorRef={ref} />}
+    </span>
   )
 }
 
@@ -94,10 +135,10 @@ export default function Sidebar() {
   const { data: session } = useSession()
   const user = session?.user as Record<string, unknown> | undefined
   const isAdmin = user?.role === 'ADMIN'
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
   const [clinicaOpen, setClinicaOpen] = useState(true)
   const [communityOpen, setCommunityOpen] = useState(true)
-  const [wipOpen] = useState(false)
+  const [wipOpen, setWipOpen] = useState(false)
 
   const wipItems = NAV_WIP.filter(n => !('adminOnly' in n) || !n.adminOnly || isAdmin)
   const isActive = (href: string) =>
@@ -105,7 +146,7 @@ export default function Sidebar() {
 
   return (
     <aside style={{
-      width: collapsed ? 64 : 224,
+      width: collapsed ? 52 : 180,
       minHeight: '100vh',
       background: C.bg,
       display: 'flex',
@@ -119,16 +160,13 @@ export default function Sidebar() {
       zIndex: 40,
     }}>
       {/* Logo */}
-      <div style={{ padding: collapsed ? '18px 0' : '18px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+      <div style={{ padding: '18px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
         {!collapsed && (
-          <Image src="/tarly-logo.png" alt="Tarly" width={88} height={26} style={{ objectFit: 'contain' }} priority />
+          <Image src="/tarly-logo.png" alt="Tarly" width={88} height={26} style={{ objectFit: 'contain', cursor: 'pointer' }} priority onClick={() => setCollapsed(true)} />
         )}
         {collapsed && (
-          <Image src="/tarly-logo.png" alt="Tarly" width={30} height={30} style={{ objectFit: 'contain', margin: '0 auto' }} priority />
+          <Image src="/tarly-icon.png" alt="Tarly" width={32} height={32} style={{ objectFit: 'contain', cursor: 'pointer' }} priority onClick={() => setCollapsed(false)} />
         )}
-        <button onClick={() => setCollapsed(c => !c)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: C.toggle, cursor: 'pointer', fontSize: 16, padding: 4, flexShrink: 0 }}>
-          {collapsed ? '›' : '‹'}
-        </button>
       </div>
 
       {/* Nav principal */}
@@ -164,21 +202,11 @@ export default function Sidebar() {
 
       {/* Seção Em construção */}
       <div style={{ padding: '8px 8px 0', flex: 1 }}>
-        <SectionHeader icon="·" label="Em construção" collapsed={collapsed} open={wipOpen} onToggle={() => {}} />
-        {wipOpen && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <SectionHeader icon="·" label="Em construção" collapsed={collapsed} open={wipOpen} onToggle={() => setWipOpen(o => !o)} />
+        {(wipOpen || collapsed) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 8 }}>
             {wipItems.map(item => (
-              <div key={item.href} title={collapsed ? item.label : undefined} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: collapsed ? '10px 0' : '9px 12px',
-                justifyContent: collapsed ? 'center' : 'flex-start',
-                borderRadius: 7, opacity: 0.35, cursor: 'not-allowed',
-                color: C.text, fontSize: '0.85rem',
-              }}>
-                <span style={{ fontSize: 15, flexShrink: 0 }}>{item.icon}</span>
-                {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                {!collapsed && <span style={{ fontSize: 10, opacity: 0.6 }}>×</span>}
-              </div>
+              <NavLink key={item.href} item={item} collapsed={collapsed} active={isActive(item.href)} />
             ))}
           </div>
         )}

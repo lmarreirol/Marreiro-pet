@@ -78,7 +78,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState('')
   const [monthCounts, setMonthCounts] = useState<Record<string, number>>({})
   const [bookingSlot, setBookingSlot] = useState<{ slot: string; pro: string | null; unitId: string } | null>(null)
-  const [bookingForm, setBookingForm] = useState({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [] as string[], notes: '', isVip: false })
+  const [bookingForm, setBookingForm] = useState({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [] as string[], notes: '', isVip: false })
 
   const PKG_PRICES: Record<string, Record<string, number>> = {
     'banho':      { small: 49,  medium: 60,  large: 90  },
@@ -93,6 +93,9 @@ export default function Dashboard() {
     return base + addonsTotal + (f.isVip ? VIP_PRICE : 0)
   }
   const [bookingSaving, setBookingSaving] = useState(false)
+  const [draggingAppt, setDraggingAppt] = useState<Appointment | null>(null)
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null)
+  const [pendingDrop, setPendingDrop] = useState<{ appt: Appointment; slot: string; pro: string | null } | null>(null)
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null)
   const [editForm, setEditForm] = useState({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', pkg: 'banho', addons: [] as string[], notes: '', isVip: false, status: 'CONFIRMED' })
   const [editSaving, setEditSaving] = useState(false)
@@ -103,6 +106,16 @@ export default function Dashboard() {
   const [rescheduleSaving, setRescheduleSaving] = useState(false)
   const [rescheduleSlots, setRescheduleSlots] = useState<{ time: string; availableCount: number }[]>([])
   const [rescheduleSlotsLoading, setRescheduleSlotsLoading] = useState(false)
+
+  const dropReschedule = async (appt: Appointment, newSlot: string, newPro: string | null) => {
+    if (appt.appointmentTime === newSlot && (appt.professional ?? null) === newPro) return
+    setAppointments(prev => prev.map(a => a.id === appt.id ? { ...a, appointmentTime: newSlot, professional: newPro } : a))
+    await fetch(`/api/admin/appointments/${appt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appointmentTime: newSlot, professional: newPro }),
+    })
+  }
 
   const saveReschedule = async () => {
     if (!reschedulingAppt || !rescheduleForm.date || !rescheduleForm.time) return
@@ -185,7 +198,7 @@ export default function Dashboard() {
   }
 
   const createManualBooking = async () => {
-    if (!bookingSlot || !bookingForm.petName || !bookingForm.tutorName) return
+    if (!bookingSlot || !bookingForm.petName || !bookingForm.tutorName || bookingForm.cpf.replace(/\D/g,'').length !== 11) return
     setBookingSaving(true)
     try {
       const res = await fetch('/api/appointments', {
@@ -201,6 +214,7 @@ export default function Dashboard() {
           petBreed: bookingForm.petBreed || null,
           petSize: bookingForm.petSize,
           tutorName: bookingForm.tutorName,
+          tutorCpf: bookingForm.cpf.replace(/\D/g, ''),
           phone: bookingForm.phone || 'Admin',
           date,
           time: bookingSlot.slot,
@@ -333,6 +347,19 @@ export default function Dashboard() {
                 <input style={inputStyle} placeholder="Nome do tutor" value={bookingForm.tutorName} onChange={e => setBookingForm(f => ({...f, tutorName: e.target.value}))} />
               </div>
               <div>
+                <label style={labelStyle}>CPF do tutor *</label>
+                <input style={{ ...inputStyle, borderColor: bookingForm.cpf && bookingForm.cpf.replace(/\D/g,'').length < 11 ? '#fca5a5' : bookingForm.cpf.replace(/\D/g,'').length === 11 ? '#86efac' : '#e5e7eb' }}
+                  placeholder="000.000.000-00"
+                  value={bookingForm.cpf}
+                  maxLength={14}
+                  onChange={e => {
+                    const raw = e.target.value.replace(/\D/g, '').slice(0, 11)
+                    const fmt = raw.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, (_,a,b,c,d) => d ? `${a}.${b}.${c}-${d}` : c ? `${a}.${b}.${c}` : b ? `${a}.${b}` : a)
+                    setBookingForm(f => ({...f, cpf: fmt}))
+                  }}
+                />
+              </div>
+              <div>
                 <label style={labelStyle}>Telefone</label>
                 <input style={inputStyle} placeholder="(85) 9 9999-9999" value={bookingForm.phone} onChange={e => setBookingForm(f => ({...f, phone: e.target.value}))} />
               </div>
@@ -372,8 +399,8 @@ export default function Dashboard() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-              <button onClick={createManualBooking} disabled={!bookingForm.petName || !bookingForm.tutorName || !bookingSlot.slot || bookingSaving}
-                style={{ flex: 1, padding: '13px', borderRadius: 12, background: '#004A99', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer', border: 'none', opacity: (!bookingForm.petName || !bookingForm.tutorName || !bookingSlot.slot) ? 0.5 : 1 }}>
+              <button onClick={createManualBooking} disabled={!bookingForm.petName || !bookingForm.tutorName || bookingForm.cpf.replace(/\D/g,'').length !== 11 || !bookingSlot.slot || bookingSaving}
+                style={{ flex: 1, padding: '13px', borderRadius: 12, background: '#004A99', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer', border: 'none', opacity: (!bookingForm.petName || !bookingForm.tutorName || bookingForm.cpf.replace(/\D/g,'').length !== 11 || !bookingSlot.slot) ? 0.5 : 1 }}>
                 {bookingSaving ? 'Salvando...' : 'Confirmar Agendamento'}
               </button>
               <button onClick={() => setBookingSlot(null)} style={{ padding: '13px 18px', borderRadius: 12, background: '#f0f4f8', color: '#555', fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none' }}>Cancelar</button>
@@ -381,6 +408,33 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      {/* Modal confirmação de remarcação por drag */}
+      {pendingDrop && (
+        <div onClick={() => setPendingDrop(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 22, marginBottom: 12, textAlign: 'center' }}>🗓️</div>
+            <div style={{ fontWeight: 900, fontSize: 17, color: '#0F1B2D', textAlign: 'center', marginBottom: 6 }}>Confirmar remarcação?</div>
+            <div style={{ fontSize: 13, color: '#555', textAlign: 'center', marginBottom: 20, lineHeight: 1.6 }}>
+              <strong>{pendingDrop.appt.petName}</strong> ({pendingDrop.appt.tutorName})<br />
+              <span style={{ color: '#999', textDecoration: 'line-through' }}>{pendingDrop.appt.appointmentTime}</span>
+              {' → '}
+              <span style={{ color: '#3B82F6', fontWeight: 800 }}>{pendingDrop.slot}</span>
+              {pendingDrop.pro && pendingDrop.pro !== pendingDrop.appt.professional && (
+                <><br /><span style={{ fontSize: 12, color: '#A855F7' }}>Profissional: {PRO_NAME_MAP_GLOBAL[pendingDrop.pro] ?? pendingDrop.pro}</span></>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setPendingDrop(null)} style={{ flex: 1, padding: '11px', borderRadius: 10, background: '#f3f4f6', border: 'none', fontWeight: 700, fontSize: 14, color: '#555', cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={() => { dropReschedule(pendingDrop.appt, pendingDrop.slot, pendingDrop.pro); setPendingDrop(null) }} style={{ flex: 1, padding: '11px', borderRadius: 10, background: '#3B82F6', border: 'none', fontWeight: 800, fontSize: 14, color: '#fff', cursor: 'pointer' }}>
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal edição de agendamento */}
       {editingAppt && (
         <div onClick={() => setEditingAppt(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -605,16 +659,16 @@ export default function Dashboard() {
                 const days: (number|null)[] = [...Array(firstDow).fill(null), ...Array.from({length: daysInMonth}, (_, i) => i + 1)]
                 while (days.length % 7 !== 0) days.push(null)
                 return (
-                  <div style={{ width: 248, flexShrink: 0, background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.08)', padding: '16px', border: '1px solid #e5e7eb' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                      <button onClick={prevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#555', padding: '2px 6px' }}>‹</button>
-                      <span style={{ fontWeight: 800, fontSize: 14, color: '#0F1B2D' }}>{MONTH_NAMES[m-1]} {y}</span>
-                      <button onClick={nextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#555', padding: '2px 6px' }}>›</button>
+                  <div style={{ width: 200, flexShrink: 0, background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.08)', padding: '12px', border: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <button onClick={prevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#555', padding: '2px 4px' }}>‹</button>
+                      <span style={{ fontWeight: 800, fontSize: 12, color: '#0F1B2D' }}>{MONTH_NAMES[m-1]} {y}</span>
+                      <button onClick={nextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#555', padding: '2px 4px' }}>›</button>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
-                      {DOW.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#bbb', padding: '2px 0' }}>{d}</div>)}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, marginBottom: 2 }}>
+                      {DOW.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: '#bbb', padding: '1px 0' }}>{d}</div>)}
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
                       {days.map((day, i) => {
                         if (!day) return <div key={i} />
                         const iso = `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`
@@ -622,44 +676,57 @@ export default function Dashboard() {
                         const isToday = iso === today
                         return (
                           <button key={i} onClick={() => { setDate(iso); setCalMonth(iso.substring(0,7)) }}
-                            style={{ aspectRatio: '1', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: isSelected || isToday ? 800 : 400,
-                              background: isSelected ? '#004A99' : isToday ? '#e0eaff' : 'transparent',
-                              color: isSelected ? '#fff' : isToday ? '#004A99' : '#333',
+                            style={{ aspectRatio: '1', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: isSelected || isToday ? 800 : 400,
+                              background: isSelected ? '#3B82F6' : isToday ? '#eff6ff' : 'transparent',
+                              color: isSelected ? '#fff' : isToday ? '#3B82F6' : '#333',
                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
                             }}>
                             {day}
                             {monthCounts[iso] > 0 && (
-                              <span style={{ width: 5, height: 5, borderRadius: '50%', background: isSelected ? 'rgba(255,255,255,0.7)' : '#EF7720', display: 'block', flexShrink: 0 }} />
+                              <span style={{ width: 3, height: 3, borderRadius: '50%', background: isSelected ? 'rgba(255,255,255,0.7)' : '#A855F7', display: 'block', flexShrink: 0 }} />
                             )}
                           </button>
                         )
                       })}
                     </div>
                     <button onClick={() => { setDate(today); setCalMonth(today.substring(0,7)) }}
-                      style={{ width: '100%', marginTop: 12, padding: '8px', borderRadius: 8, background: '#f0f4f8', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#004A99' }}>
+                      style={{ width: '100%', marginTop: 8, padding: '5px', borderRadius: 6, background: '#f0f4f8', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#3B82F6' }}>
                       Hoje
                     </button>
-                    <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {isAdmin && (
-                        <select value={unitFilter} onChange={e => { setUnitFilter(e.target.value); setProFilter('all') }} style={{ ...inputStyle, fontSize: 12 }}>
+                        <select value={unitFilter} onChange={e => { setUnitFilter(e.target.value); setProFilter('all') }} style={{ ...inputStyle, fontSize: 11 }}>
                           <option value="all">Todas as unidades</option>
                           {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                         </select>
                       )}
-                      <select value={proFilter} onChange={e => setProFilter(e.target.value)} style={{ ...inputStyle, fontSize: 12 }}>
+                      <select value={proFilter} onChange={e => setProFilter(e.target.value)} style={{ ...inputStyle, fontSize: 11 }}>
                         <option value="all">Todos os profissionais</option>
                         {(PROFESSIONALS[isAdmin ? (unitFilter !== 'all' ? unitFilter : '') : user?.unitId] ?? Object.values(PROFESSIONALS).flat())
                           .filter((p, i, arr) => arr.findIndex(x => x.id === p.id) === i && p.id !== 'any')
                           .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     </div>
-                    <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
                       {Object.entries(STATUS_LABELS).map(([s, label]) => (
-                        <div key={s} style={{ background: STATUS_COLORS[s] + '12', borderRadius: 8, padding: '8px 10px' }}>
-                          <div style={{ fontSize: 20, fontWeight: 900, color: STATUS_COLORS[s] }}>{appointments.filter(a => a.status === s).length}</div>
-                          <div style={{ fontSize: 10, color: '#888', lineHeight: 1.2, marginTop: 1 }}>{label}</div>
+                        <div key={s} style={{ background: STATUS_COLORS[s] + '12', borderRadius: 6, padding: '6px 8px' }}>
+                          <div style={{ fontSize: 16, fontWeight: 900, color: STATUS_COLORS[s] }}>{appointments.filter(a => a.status === s).length}</div>
+                          <div style={{ fontSize: 9, color: '#888', lineHeight: 1.2, marginTop: 1 }}>{label}</div>
                         </div>
                       ))}
+                    </div>
+                    {/* Busca */}
+                    <div style={{ position: 'relative', marginTop: 10 }}>
+                      <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#bbb', pointerEvents: 'none' }}>🔍</span>
+                      <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Pet, tutor ou telefone..."
+                        style={{ width: '100%', padding: '8px 28px 8px 28px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 11, background: '#fff', boxSizing: 'border-box' }}
+                      />
+                      {search && (
+                        <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: 15, color: '#bbb', cursor: 'pointer', lineHeight: 1 }}>×</button>
+                      )}
                     </div>
                   </div>
                 )
@@ -682,20 +749,6 @@ export default function Dashboard() {
                       ⭐ Encaixe VIP
                     </button>
                   </div>
-                </div>
-
-                {/* Busca */}
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 15, color: '#bbb', pointerEvents: 'none' }}>🔍</span>
-                  <input
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Buscar por pet, tutor ou telefone..."
-                    style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, background: '#fff', boxSizing: 'border-box' }}
-                  />
-                  {search && (
-                    <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: 18, color: '#bbb', cursor: 'pointer', lineHeight: 1 }}>×</button>
-                  )}
                 </div>
 
               {/* ── Agenda ── */}
@@ -741,14 +794,14 @@ export default function Dashboard() {
                   <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#f8fafc', position: 'sticky', top: 0, zIndex: 10 }}>
                     <div style={{ width: TIME_W, flexShrink: 0, borderRight: '1px solid #e5e7eb', position: 'sticky', left: 0, background: '#f8fafc', zIndex: 11 }} />
                     {visiblePros.map((pro, pi) => (
-                      <div key={pi} style={{ flex: 1, minWidth: COL_MIN_W, padding: '14px 16px', borderRight: pi < visiblePros.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #004A99, #0066cc)', color: '#fff', fontWeight: 900, fontSize: pro ? 16 : 18, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div key={pi} style={{ flex: 1, minWidth: COL_MIN_W, padding: '8px 12px', borderRight: pi < visiblePros.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg, #3B82F6, #A855F7)', color: '#fff', fontWeight: 900, fontSize: pro ? 13 : 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             {pro ? (PRO_NAME_MAP[pro] ?? pro)[0].toUpperCase() : '💈'}
                           </div>
                           <div>
-                            <div style={{ fontWeight: 800, fontSize: 14, color: '#0F1B2D' }}>{PRO_NAME_MAP[pro ?? ''] ?? pro ?? 'Sem Preferência'}</div>
-                            <div style={{ fontSize: 11, color: '#aaa' }}>{filteredAppointments.filter(a => (a.professional ?? null) === pro).length} agend.</div>
+                            <div style={{ fontWeight: 700, fontSize: 13, color: '#0F1B2D' }}>{PRO_NAME_MAP[pro ?? ''] ?? pro ?? 'Sem Preferência'}</div>
+                            <div style={{ fontSize: 10, color: '#aaa' }}>{filteredAppointments.filter(a => (a.professional ?? null) === pro).length} agend.</div>
                           </div>
                         </div>
                       </div>
@@ -768,15 +821,25 @@ export default function Dashboard() {
                             const appts = getAppts(slot, pro)
                             const isEmpty = appts.length === 0
                             return (
-                              <div key={pi} onClick={() => isEmpty && setBookingSlot({ slot, pro, unitId: unitKey ?? (user?.unitId ?? 'caucaia') })} style={{ flex: 1, minWidth: COL_MIN_W, borderRight: pi < visiblePros.length - 1 ? '1px solid #f0f4f8' : 'none', padding: 6, cursor: isEmpty ? 'pointer' : 'default', position: 'relative', display: 'flex', flexDirection: 'column', gap: 4 }}
-                                onMouseEnter={e => { if (isEmpty) (e.currentTarget as HTMLElement).style.background = '#f0f6ff' }}
-                                onMouseLeave={e => { if (isEmpty) (e.currentTarget as HTMLElement).style.background = '' }}
+                              <div key={pi}
+                                onClick={() => isEmpty && !draggingAppt && setBookingSlot({ slot, pro, unitId: unitKey ?? (user?.unitId ?? 'caucaia') })}
+                                onDragOver={e => { e.preventDefault(); setDragOverKey(`${slot}-${pi}`) }}
+                                onDragLeave={() => setDragOverKey(null)}
+                                onDrop={e => { e.preventDefault(); setDragOverKey(null); if (draggingAppt && (draggingAppt.appointmentTime !== slot || (draggingAppt.professional ?? null) !== pro)) { setPendingDrop({ appt: draggingAppt, slot, pro }); setDraggingAppt(null) } }}
+                                style={{ flex: 1, minWidth: COL_MIN_W, borderRight: pi < visiblePros.length - 1 ? '1px solid #f0f4f8' : 'none', padding: 6, cursor: isEmpty ? 'pointer' : 'default', position: 'relative', display: 'flex', flexDirection: 'column', gap: 4, transition: 'background 0.1s', background: dragOverKey === `${slot}-${pi}` ? 'rgba(59,130,246,0.08)' : '' }}
+                                onMouseEnter={e => { if (isEmpty && !draggingAppt) (e.currentTarget as HTMLElement).style.background = '#f0f6ff' }}
+                                onMouseLeave={e => { if (!dragOverKey) (e.currentTarget as HTMLElement).style.background = '' }}
                               >
                                 {isEmpty && (
                                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c7d8f0', fontSize: 20, fontWeight: 300, userSelect: 'none' }}>+</div>
                                 )}
                                 {appts.map(a => (
-                                  <div key={a.id} onClick={e => { e.stopPropagation(); openEditAppt(a) }} style={{ background: STATUS_COLORS[a.status] + '10', border: `1.5px solid ${STATUS_COLORS[a.status]}50`, borderLeft: `4px solid ${STATUS_COLORS[a.status]}`, borderRadius: 10, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
+                                  <div key={a.id}
+                                    draggable
+                                    onDragStart={e => { e.stopPropagation(); setDraggingAppt(a); e.dataTransfer.effectAllowed = 'move' }}
+                                    onDragEnd={() => setDraggingAppt(null)}
+                                    onClick={e => { e.stopPropagation(); if (!draggingAppt) openEditAppt(a) }}
+                                    style={{ background: STATUS_COLORS[a.status] + '10', border: `1.5px solid ${STATUS_COLORS[a.status]}50`, borderLeft: `4px solid ${STATUS_COLORS[a.status]}`, borderRadius: 10, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4, cursor: 'grab', opacity: draggingAppt?.id === a.id ? 0.45 : 1, transition: 'opacity 0.15s' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                       <span style={{ fontSize: 10, fontWeight: 800, color: STATUS_COLORS[a.status], textTransform: 'uppercase', letterSpacing: 0.4 }}>
                                         {a.status === 'AWAITING_PAYMENT' ? 'Pendente' : STATUS_LABELS[a.status]}
@@ -1166,12 +1229,15 @@ function ClinicTab({ isAdmin, userUnitId, onEditAppt }: { isAdmin: boolean; user
   )
 }
 
-const PROFESSIONALS: Record<string, { id: string; name: string }[]> = {
+const PROFESSIONALS_RAW: Record<string, { id: string; name: string }[]> = {
   caucaia: [{ id: 'victor', name: 'Victor Lopes' }, { id: 'daniele', name: 'Daniele Santos' }, { id: 'eduarda', name: 'Eduarda' }, { id: 'israel', name: 'Israel' }],
   pecem: [{ id: 'vitoria', name: 'Vitória Duraes' }, { id: 'christian', name: 'Christian Fernandes' }],
   taiba: [{ id: 'andresa', name: 'Andresa Martins' }, { id: 'erica', name: 'Erica Melo' }],
   saogoncalo: [{ id: 'anderson', name: 'Anderson Correia' }, { id: 'carla', name: 'Carla Janaina' }],
 }
+const PROFESSIONALS = PROFESSIONALS_RAW
+const PRO_NAME_MAP_GLOBAL: Record<string, string> = {}
+Object.values(PROFESSIONALS_RAW).flat().forEach(p => { PRO_NAME_MAP_GLOBAL[p.id] = p.name })
 const ALL_SLOTS = ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30']
 
 function AvailabilityTab({ unitId, isAdmin }: { unitId?: string; isAdmin: boolean }) {

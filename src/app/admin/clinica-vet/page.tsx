@@ -130,92 +130,75 @@ export default function ClinicaVetPage() {
   if (status === 'loading') return <div style={{ padding: 40, textAlign: 'center' }}>Carregando...</div>
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: '1.5rem 2rem', maxWidth: 1300, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827' }}>Agenda Clínica</h1>
         <p style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: 2 }}>Consultas, vacinação e exames</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-        {/* Coluna esquerda: filtros */}
-        <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Navegação de data */}
-          <div style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <button onClick={() => setDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() - 1); return dt.toISOString().split('T')[0] })} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-              <span style={{ fontWeight: 800, fontSize: 15, color: '#111827' }}>{dateLabel}</span>
-              <button onClick={() => setDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() + 1); return dt.toISOString().split('T')[0] })} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
-            </div>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, boxSizing: 'border-box' }} />
-            <button onClick={() => setDate(todayISO())} style={{ width: '100%', marginTop: 8, padding: '8px', borderRadius: 8, background: '#f0f9ff', color: '#7C3AED', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer' }}>Hoje</button>
-          </div>
-
-          {/* Filtros */}
-          <div style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#888', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Filtros</div>
-            {isAdmin && (
-              <select value={unitFilter} onChange={e => setUnitFilter(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, marginBottom: 8, boxSizing: 'border-box' }}>
-                <option value="all">Todas as unidades</option>
-                {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            )}
-            <select value={serviceFilter} onChange={e => setServiceFilter(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, boxSizing: 'border-box' }}>
-              <option value="all">Todos os serviços</option>
-              {Object.entries(CLINIC_SERVICE_LABELS).map(([id, label]) => (
-                <option key={id} value={id}>{label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Resumo */}
-          <div style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>Resumo do dia</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {Object.entries(STATUS_LABELS).map(([s, label]) => {
-                const count = rows.filter(a => a.status === s).length
-                return (
-                  <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLORS[s] }} />
-                      <span style={{ fontSize: 12, color: '#555' }}>{label}</span>
-                    </div>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: count > 0 ? STATUS_COLORS[s] : '#ccc' }}>{count}</span>
-                  </div>
-                )
-              })}
-              <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 8, display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>Total</span>
-                <span style={{ fontSize: 14, fontWeight: 900, color: '#7C3AED' }}>{rows.length}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Por serviço */}
-          {rows.length > 0 && (
-            <div style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>Por serviço</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {Object.entries(CLINIC_SERVICE_LABELS).map(([s, label]) => {
-                  const count = rows.filter(a => a.serviceType === s).length
-                  if (!count) return null
-                  return (
-                    <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 14 }}>{SVCICONS[s]}</span>
-                        <span style={{ fontSize: 12, color: '#555' }}>{label}</span>
-                      </div>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: SVCCOLORS[s] }}>{count}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+      {/* Barra de topo: data + filtros + resumo */}
+      <div style={{ background: '#fff', borderRadius: 16, padding: '14px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        {/* Navegação de data */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => setDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() - 1); return dt.toISOString().split('T')[0] })} style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+          <span style={{ fontWeight: 800, fontSize: 15, color: '#111827', minWidth: 70, textAlign: 'center' }}>{dateLabel}</span>
+          <button onClick={() => setDate(d => { const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() + 1); return dt.toISOString().split('T')[0] })} style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13 }} />
+          <button onClick={() => setDate(todayISO())} style={{ padding: '6px 12px', borderRadius: 8, background: '#f0f9ff', color: '#7C3AED', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>Hoje</button>
         </div>
 
+        <div style={{ width: 1, height: 32, background: '#e5e7eb', flexShrink: 0 }} />
+
+        {/* Filtros */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {isAdmin && (
+            <select value={unitFilter} onChange={e => setUnitFilter(e.target.value)} style={{ padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13 }}>
+              <option value="all">Todas as unidades</option>
+              {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          )}
+          <select value={serviceFilter} onChange={e => setServiceFilter(e.target.value)} style={{ padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13 }}>
+            <option value="all">Todos os serviços</option>
+            {Object.entries(CLINIC_SERVICE_LABELS).map(([id, label]) => (
+              <option key={id} value={id}>{label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ width: 1, height: 32, background: '#e5e7eb', flexShrink: 0 }} />
+
+        {/* Resumo compacto */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {Object.entries(STATUS_LABELS).map(([s, label]) => {
+            const count = rows.filter(a => a.status === s).length
+            return (
+              <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_COLORS[s] }} />
+                <span style={{ fontSize: 12, color: '#777' }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: count > 0 ? STATUS_COLORS[s] : '#ccc' }}>{count}</span>
+              </div>
+            )
+          })}
+          <div style={{ borderLeft: '1px solid #e5e7eb', paddingLeft: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>Total</span>
+            <span style={{ fontSize: 14, fontWeight: 900, color: '#7C3AED' }}>{rows.length}</span>
+          </div>
+          {Object.entries(CLINIC_SERVICE_LABELS).map(([s, label]) => {
+            const count = rows.filter(a => a.serviceType === s).length
+            if (!count) return null
+            return (
+              <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 4, background: SVCCOLORS[s] + '12', borderRadius: 6, padding: '3px 8px' }}>
+                <span style={{ fontSize: 12 }}>{SVCICONS[s]}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: SVCCOLORS[s] }}>{count}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
         {/* Colunas por serviço */}
-        <div style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
+        <div style={{ minWidth: 0, overflowX: 'auto' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: 60, color: '#888' }}>Carregando...</div>
           ) : (
@@ -293,7 +276,6 @@ export default function ClinicaVetPage() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Modal editar */}
       {editingAppt && (
