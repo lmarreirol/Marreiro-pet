@@ -786,10 +786,7 @@ img { max-width: 100%; display: block; }
   padding-top: 24px; display: flex; justify-content: space-between;
   font-size: 13px; flex-wrap: wrap; gap: 10px;
 }
-.footer-tarly {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  padding-top: 20px; font-size: 11px; color: rgba(255,255,255,0.35); letter-spacing: 0.04em; text-transform: uppercase;
-}
+.footer-tarly { display: flex; align-items: center; gap: 6px; font-size: 11px; color: rgba(255,255,255,0.35); letter-spacing: 0.04em; text-transform: uppercase; }
 .footer-tarly a { display: flex; align-items: center; opacity: 0.85; transition: opacity 0.2s; }
 .footer-tarly a:hover { opacity: 1; }
 .footer-tarly img { display: block; mix-blend-mode: screen; }
