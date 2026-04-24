@@ -445,20 +445,6 @@ export default function Dashboard() {
                   <option value="CANCELLED">Cancelado</option>
                 </select>
               </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={labelStyle}>Serviços extras</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                  {Object.entries(ADDONS).map(([id, label]) => {
-                    const checked = editForm.addons.includes(id)
-                    return (
-                      <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, border: `1.5px solid ${checked ? '#EF7720' : '#e5e7eb'}`, background: checked ? '#fff4ed' : '#f8fafc', cursor: editLocked ? 'default' : 'pointer', fontSize: 13, fontWeight: checked ? 700 : 400, color: checked ? '#EF7720' : (editLocked ? '#bbb' : '#555'), userSelect: 'none', opacity: editLocked ? 0.7 : 1 }}>
-                        <input type="checkbox" checked={checked} onChange={() => !editLocked && setEditForm(f => ({ ...f, addons: checked ? f.addons.filter(a => a !== id) : [...f.addons, id] }))} style={{ display: 'none' }} disabled={editLocked} />
-                        {label}
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
               <div style={{ gridColumn: '1/-1', background: 'linear-gradient(135deg, #004A99, #0066cc)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 600 }}>Total calculado</div>
                 <div style={{ color: '#fff', fontSize: 24, fontWeight: 900 }}>R$ {calcBookingTotal({ ...editForm, pkg: editForm.pkg }).toFixed(2).replace('.', ',')}</div>
