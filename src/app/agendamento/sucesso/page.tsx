@@ -56,6 +56,51 @@ const UNIT_PHONES: Record<string, string> = {
   taiba: '5585992231172',
 }
 
+type PixData = { status: string; encodedImage?: string; payload?: string; expirationDate?: string }
+
+function PixBox({ apptId }: { apptId: string }) {
+  const [pix, setPix] = useState<PixData | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    const check = async () => {
+      try {
+        const r = await fetch(`/api/payments/pix?id=${apptId}`)
+        const d: PixData = await r.json()
+        if (active) setPix(d)
+        if (active && d.status !== 'APPROVED') setTimeout(check, 6000)
+      } catch { /* ignore */ }
+    }
+    check()
+    return () => { active = false }
+  }, [apptId])
+
+  if (!pix || pix.status === 'APPROVED') return null
+
+  const copy = () => {
+    if (pix.payload) { navigator.clipboard.writeText(pix.payload); setCopied(true); setTimeout(() => setCopied(false), 2500) }
+  }
+
+  return (
+    <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 16, padding: '20px', marginBottom: 24, textAlign: 'center' }}>
+      <div style={{ fontWeight: 800, fontSize: 15, color: '#166534', marginBottom: 4 }}>Pague com PIX para confirmar</div>
+      <div style={{ fontSize: 12, color: '#4ade80', marginBottom: 12 }}>Taxa 0% · Confirmação em segundos</div>
+      {pix.encodedImage && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={`data:image/png;base64,${pix.encodedImage}`} alt="QR Code PIX" style={{ width: 180, height: 180, margin: '0 auto 12px', display: 'block', borderRadius: 8 }} />
+      )}
+      {pix.payload && (
+        <button onClick={copy} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #86efac', background: copied ? '#dcfce7' : '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: copied ? '#166534' : '#16a34a', wordBreak: 'break-all', textAlign: 'left' }}>
+          {copied ? '✓ Copiado!' : '📋 Copiar código PIX'}<br />
+          <span style={{ fontWeight: 400, fontSize: 10, color: '#888', wordBreak: 'break-all' }}>{pix.payload.slice(0, 60)}...</span>
+        </button>
+      )}
+      <div style={{ marginTop: 10, fontSize: 11, color: '#888' }}>Esta página atualiza automaticamente após o pagamento</div>
+    </div>
+  )
+}
+
 function SucessoContent() {
   const searchParams = useSearchParams()
   const id = searchParams.get('id')
@@ -132,6 +177,8 @@ function SucessoContent() {
         <p style={{ color: '#4A5468', fontSize: 15, lineHeight: 1.6, marginBottom: apt?.isVip ? 16 : 28 }}>
           Olá, <strong>{apt?.tutorName ?? ''}</strong>! Seu agendamento foi registrado com sucesso. Salve o comprovante abaixo para seus registros.
         </p>
+
+        {id && <PixBox apptId={id} />}
 
         {apt?.isVip && (
           <div style={{ background: '#FEF1E4', border: '1.5px solid #EF7720', borderRadius: 12, padding: '12px 16px', marginBottom: 24, textAlign: 'left', display: 'flex', gap: 10, alignItems: 'flex-start' }}>

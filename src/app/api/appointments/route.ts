@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import type { AppointmentPayload } from '@/types'
 import { PROFESSIONALS_BY_UNIT } from '@/data/professionals'
+import { asaasCreateOrFindCustomer, asaasCreatePixPayment } from '@/lib/asaas'
 
 async function autoAssignProfessional(unitId: string, date: string, time: string): Promise<string | null> {
   const professionals = PROFESSIONALS_BY_UNIT[unitId]
@@ -75,41 +76,29 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Cria preferência no Mercado Pago
-    let checkoutUrl: string | null = null
+    // Cria pagamento PIX via Asaas
     try {
-      const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
-        body: JSON.stringify({
-          items: [{ title: `Agendamento ${serviceType} — ${petName}`, quantity: 1, unit_price: Number(totalPrice), currency_id: 'BRL' }],
-          payer: { name: tutorName, phone: { number: phone }, email: email ?? '' },
-          back_urls: {
-            success: `${process.env.NEXT_PUBLIC_URL}/agendamento/sucesso?id=${appointment.id}`,
-            failure: `${process.env.NEXT_PUBLIC_URL}/agendamento/falha?id=${appointment.id}`,
-            pending: `${process.env.NEXT_PUBLIC_URL}/agendamento/pendente?id=${appointment.id}`,
-          },
-          ...(process.env.NEXT_PUBLIC_URL?.startsWith('https') ? { auto_return: 'approved' } : {}),
-          notification_url: `${process.env.NEXT_PUBLIC_URL}/api/webhooks/mercadopago`,
-          external_reference: appointment.id,
-          statement_descriptor: 'MARREIRO PET',
-        }),
-      })
-      const mpData = await mpResponse.json()
-      if (mpResponse.ok) {
-        await prisma.appointment.update({ where: { id: appointment.id }, data: { paymentId: mpData.id } })
-        checkoutUrl = mpData.init_point
-      } else {
-        console.warn('[MP] Erro ao criar preferência:', mpData)
+      if (tutorCpf && process.env.ASAAS_API_KEY) {
+        const customer = await asaasCreateOrFindCustomer(tutorName, tutorCpf, phone, email ?? undefined)
+        if (customer?.id) {
+          const dateOnly = appointment.appointmentDate.toISOString().split('T')[0]
+          const payment = await asaasCreatePixPayment({
+            customerId: customer.id,
+            value: Number(totalPrice),
+            dueDate: dateOnly,
+            description: `Agendamento ${serviceType === 'grooming' ? 'Banho & Tosa' : 'Clínica'} — ${petName}`,
+            externalReference: appointment.id,
+          })
+          if (payment?.id) {
+            await prisma.appointment.update({ where: { id: appointment.id }, data: { paymentId: payment.id } })
+          }
+        }
       }
-    } catch (mpErr) {
-      console.warn('[MP] Falha ao conectar:', mpErr)
+    } catch (asaasErr) {
+      console.warn('[Asaas] Erro ao criar pagamento PIX:', asaasErr)
     }
 
-    if (!checkoutUrl) {
-      checkoutUrl = `${process.env.NEXT_PUBLIC_URL}/agendamento/sucesso?id=${appointment.id}`
-    }
-
+    const checkoutUrl = `${process.env.NEXT_PUBLIC_URL}/agendamento/sucesso?id=${appointment.id}`
     return NextResponse.json({ appointmentId: appointment.id, checkoutUrl, professional: resolvedProfessional }, { status: 201 })
 
   } catch (err) {
