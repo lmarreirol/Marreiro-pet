@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { PROFESSIONALS_BY_UNIT } from '@/data/professionals'
-
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const unitId = searchParams.get('unitId')
@@ -12,8 +10,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ professional: null })
   }
 
-  const professionals = PROFESSIONALS_BY_UNIT[unitId]
-  if (!professionals?.length) return NextResponse.json({ professional: null })
+  const rows = await prisma.professional.findMany({ where: { unitId, active: true }, select: { slug: true } })
+  const professionals = rows.map(r => r.slug)
+  if (!professionals.length) return NextResponse.json({ professional: null })
 
   const dateOnly = date.split('T')[0]
   const start = new Date(`${dateOnly}T00:00:00.000Z`)

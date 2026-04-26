@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import Icon from '@/components/ui/Icon'
-import { PRO_NAMES } from '@/data/professionals'
 
 const SERVICES = [
   { id: 'vet', name: 'Consulta Veterinária', sub: 'Check-up, diagnóstico', icon: 'stethoscope' as const },
@@ -120,6 +119,7 @@ export default function Scheduler() {
   const [error, setError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [assignedPro, setAssignedPro] = useState<string | null>(null)
+  const [assignedProName, setAssignedProName] = useState<string | null>(null)
   const [availableSlots, setAvailableSlots] = useState<Record<string, number>>({})
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [bookedTimes, setBookedTimes] = useState<string[]>([])
@@ -261,6 +261,7 @@ export default function Scheduler() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Erro ao agendar')
       setAssignedPro(json.professional ?? null)
+      setAssignedProName(json.professionalName ?? null)
       setSubmitted(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao processar agendamento')
@@ -277,7 +278,7 @@ export default function Scheduler() {
       : ''
     const petSize = data.size === 'small' ? 'Pequeno (até 10kg)' : data.size === 'medium' ? 'Médio (10–20kg)' : data.size === 'large' ? 'Grande (acima de 20kg)' : ''
 
-    const proName = assignedPro ? (PRO_NAMES[assignedPro] ?? assignedPro) : null
+    const proName = assignedProName ?? assignedPro
     const waMsg = [
       `Olá! Gostaria de confirmar meu agendamento na unidade Marreiro Pet ${unit?.name}.`,
       ``,
@@ -302,7 +303,7 @@ export default function Scheduler() {
             <div className="summary-row"><span className="k">Serviço</span><span className="v">{service?.name}</span></div>
             <div className="summary-row"><span className="k">Unidade</span><span className="v">{unit?.name}</span></div>
             <div className="summary-row"><span className="k">Data</span><span className="v">{dateStr} às {data.time}</span></div>
-            {assignedPro && data.service === 'banho' && <div className="summary-row"><span className="k">Profissional</span><span className="v">{PRO_NAMES[assignedPro] ?? assignedPro}</span></div>}
+            {assignedPro && data.service === 'banho' && <div className="summary-row"><span className="k">Profissional</span><span className="v">{assignedProName ?? assignedPro}</span></div>}
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 14, flexWrap: 'wrap' }}>
             <a href={waUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary"><Icon name="wa" size={16} /> Confirmar pelo WhatsApp</a>

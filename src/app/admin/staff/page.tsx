@@ -10,16 +10,23 @@ const UNITS = [
   { id: 'taiba', name: 'Taíba' },
 ]
 
+const SERVICES = [
+  { id: 'banho', label: 'Banho Tradicional' },
+  { id: 'banho-tosa', label: 'Banho + Tosa Higiênica' },
+  { id: 'spa', label: 'Tosa Completa + Banho' },
+]
+
 type Professional = {
   id: string
   name: string
   slug: string
   unitId: string
   active: boolean
+  services: string[]
   createdAt: string
 }
 
-const EMPTY_FORM = { name: '', slug: '', unitId: 'caucaia' }
+const EMPTY_FORM = { name: '', slug: '', unitId: 'caucaia', services: [] as string[] }
 
 function slugify(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
@@ -52,7 +59,12 @@ export default function StaffPage() {
   useEffect(() => { if (status === 'authenticated') load() }, [status])
 
   const openAdd = () => { setForm(EMPTY_FORM); setEditing(null); setError(''); setModal('add') }
-  const openEdit = (p: Professional) => { setForm({ name: p.name, slug: p.slug, unitId: p.unitId }); setEditing(p); setError(''); setModal('edit') }
+  const openEdit = (p: Professional) => { setForm({ name: p.name, slug: p.slug, unitId: p.unitId, services: p.services ?? [] }); setEditing(p); setError(''); setModal('edit') }
+
+  const toggleService = (id: string) => setForm(f => ({
+    ...f,
+    services: f.services.includes(id) ? f.services.filter(s => s !== id) : [...f.services, id],
+  }))
 
   const save = async () => {
     if (!form.name.trim()) { setError('Nome é obrigatório.'); return }
@@ -64,7 +76,7 @@ export default function StaffPage() {
         {
           method: editing ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...form, slug: form.slug || slugify(form.name) }),
+          body: JSON.stringify({ ...form, slug: form.slug || slugify(form.name), services: form.services }),
         }
       )
       if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Erro ao salvar.'); setSaving(false); return }
@@ -138,7 +150,19 @@ export default function StaffPage() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, color: '#111827', fontSize: '0.95rem' }}>{p.name}</div>
-                      <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 1 }}>ID: {p.slug}</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                        {(p.services?.length ? p.services : []).map(s => {
+                          const svc = SERVICES.find(x => x.id === s)
+                          return svc ? (
+                            <span key={s} style={{ fontSize: '0.68rem', fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                              {svc.label}
+                            </span>
+                          ) : null
+                        })}
+                        {!p.services?.length && (
+                          <span style={{ fontSize: '0.72rem', color: '#d1d5db' }}>Nenhum serviço definido</span>
+                        )}
+                      </div>
                     </div>
                     <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: p.active ? '#dcfce7' : '#f3f4f6', color: p.active ? '#16a34a' : '#6b7280', flexShrink: 0 }}>
                       {p.active ? 'Ativo' : 'Inativo'}
@@ -193,6 +217,17 @@ export default function StaffPage() {
                 <select value={form.unitId} onChange={e => setForm(f => ({ ...f, unitId: e.target.value }))} style={{ ...inp, cursor: 'pointer' }}>
                   {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>Serviços que realiza</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {SERVICES.map(s => (
+                    <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${form.services.includes(s.id) ? '#3b82f6' : '#e5e7eb'}`, background: form.services.includes(s.id) ? '#eff6ff' : '#fff', transition: 'all .15s' }}>
+                      <input type="checkbox" checked={form.services.includes(s.id)} onChange={() => toggleService(s.id)} style={{ width: 16, height: 16, accentColor: '#3b82f6', cursor: 'pointer' }} />
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: form.services.includes(s.id) ? '#1d4ed8' : '#374151' }}>{s.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
               {error && <p style={{ color: '#ef4444', fontSize: '0.82rem' }}>{error}</p>}
             </div>

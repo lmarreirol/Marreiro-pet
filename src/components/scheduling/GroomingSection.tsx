@@ -109,11 +109,13 @@ interface GroomingState {
   phone: string
   cpf: string
   notes: string
+  paymentMethod: 'pix' | 'card' | null
 }
 
 const initialState: GroomingState = {
   size: null, package: null, addons: [], professional: null, unit: null,
   date: null, time: null, vip: false, petName: '', petBreed: '', tutorName: '', phone: '', cpf: '', notes: '',
+  paymentMethod: null,
 }
 
 function Recap({ data, total, totalDurationMin, previewPro, previewProStatus }: { data: GroomingState; total: number; totalDurationMin: number; previewPro: string | null; previewProStatus: 'idle' | 'loading' | 'found' | 'none' }) {
@@ -155,7 +157,7 @@ function Recap({ data, total, totalDurationMin, previewPro, previewProStatus }: 
       <div className="recap-total">
         <div className="recap-total-label">Total estimado</div>
         <div className="recap-total-value">{fmtBRL(total)}</div>
-        <div className="recap-total-sub">Pague agora com cartão ou PIX via Mercado Pago.</div>
+        <div className="recap-total-sub">Pague com PIX ou cartão de crédito.</div>
       </div>
     </div>
   )
@@ -277,7 +279,7 @@ export default function GroomingSection() {
     if (step === 1) return true
     if (step === 2) return data.professional && data.unit
     if (step === 3) return data.date && data.time
-    if (step === 4) return data.petName && data.tutorName && data.phone && data.cpf && data.size && validateCpf(data.cpf)
+    if (step === 4) return data.petName && data.tutorName && data.phone && data.cpf && data.size && validateCpf(data.cpf) && !!data.paymentMethod
     return false
   }
 
@@ -317,12 +319,13 @@ export default function GroomingSection() {
           time: data.time,
           totalPrice: total,
           isVip: data.vip,
+          paymentMethod: data.paymentMethod,
         }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Erro ao agendar')
-      // Redireciona para o checkout do Mercado Pago
-      window.location.href = json.checkoutUrl
+      // Cartão → redireciona para o invoiceUrl do Asaas; PIX → página de sucesso com QR
+      window.location.href = (data.paymentMethod === 'card' && json.invoiceUrl) ? json.invoiceUrl : json.checkoutUrl
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao processar pagamento')
       setLoading(false)
@@ -568,6 +571,33 @@ export default function GroomingSection() {
                       <div className="label" style={{ marginBottom: 6 }}>Observações (alergias, comportamento, preferências)</div>
                       <textarea className="textarea" value={data.notes} onChange={e => update({ notes: e.target.value })} />
                     </div>
+
+                    <div className="form-row">
+                      <div className="label" style={{ marginBottom: 10 }}>Forma de pagamento *</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        {([
+                          { id: 'pix', icon: '⚡', title: 'PIX', sub: 'Confirmação imediata' },
+                          { id: 'card', icon: '💳', title: 'Cartão de crédito', sub: 'Parcelamento disponível' },
+                        ] as const).map(opt => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => update({ paymentMethod: opt.id })}
+                            style={{
+                              padding: '14px 12px', borderRadius: 12, textAlign: 'left', cursor: 'pointer',
+                              border: `2px solid ${data.paymentMethod === opt.id ? 'var(--brand)' : '#e5e7eb'}`,
+                              background: data.paymentMethod === opt.id ? 'rgba(239,119,32,0.06)' : '#fff',
+                              transition: 'all .15s',
+                            }}
+                          >
+                            <div style={{ fontSize: 22, marginBottom: 6 }}>{opt.icon}</div>
+                            <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--ink)', marginBottom: 2 }}>{opt.title}</div>
+                            <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>{opt.sub}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {error && <p style={{ color: 'red', fontSize: 14, marginTop: 8 }}>{error}</p>}
                   </>
                 )}

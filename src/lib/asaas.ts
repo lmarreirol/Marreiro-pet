@@ -1,6 +1,6 @@
 const BASE = process.env.ASAAS_SANDBOX === 'true'
   ? 'https://sandbox.asaas.com/api/v3'
-  : 'https://api.asaas.com/api/v3'
+  : 'https://www.asaas.com/api/v3'
 
 function headers() {
   return {
@@ -9,25 +9,31 @@ function headers() {
   }
 }
 
-export async function asaasCreateOrFindCustomer(name: string, cpfCnpj: string, phone?: string, email?: string) {
-  // Check if customer already exists
-  const search = await fetch(`${BASE}/customers?cpfCnpj=${cpfCnpj.replace(/\D/g, '')}`, { headers: headers() })
+async function safeJson(res: Response) {
+  const text = await res.text()
+  if (!text) throw new Error(`Asaas HTTP ${res.status} — empty body`)
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error(`Asaas HTTP ${res.status} — invalid JSON: ${text.slice(0, 200)}`)
+  }
+}
+
+export async function asaasCreateOrFindCustomer(name: string, cpfCnpj: string, _phone?: string, email?: string) {
+  const cpf = cpfCnpj.replace(/\D/g, '')
+
+  const search = await fetch(`${BASE}/customers?cpfCnpj=${cpf}`, { headers: headers() })
   if (search.ok) {
-    const data = await search.json()
+    const data = await safeJson(search)
     if (data.data?.length > 0) return data.data[0] as { id: string }
   }
 
   const res = await fetch(`${BASE}/customers`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify({
-      name,
-      cpfCnpj: cpfCnpj.replace(/\D/g, ''),
-      ...(phone ? { phone: phone.replace(/\D/g, '') } : {}),
-      ...(email ? { email } : {}),
-    }),
+    body: JSON.stringify({ name, cpfCnpj: cpf, ...(email ? { email } : {}) }),
   })
-  return res.json() as Promise<{ id: string; errors?: { description: string }[] }>
+  return safeJson(res) as Promise<{ id: string; errors?: { code: string; description: string }[] }>
 }
 
 export async function asaasCreatePixPayment(data: {
@@ -49,15 +55,42 @@ export async function asaasCreatePixPayment(data: {
       externalReference: data.externalReference,
     }),
   })
-  return res.json() as Promise<{ id: string; status: string; errors?: { description: string }[] }>
+  return safeJson(res) as Promise<{ id: string; status: string; errors?: { description: string }[] }>
+}
+
+export async function asaasCreateCardPayment(data: {
+  customerId: string
+  value: number
+  dueDate: string
+  description: string
+  externalReference: string
+  successUrl: string
+}) {
+  const res = await fetch(`${BASE}/payments`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({
+      customer: data.customerId,
+      billingType: 'CREDIT_CARD',
+      value: data.value,
+      dueDate: data.dueDate,
+      description: data.description,
+      externalReference: data.externalReference,
+      callback: {
+        successUrl: data.successUrl,
+        autoRedirect: true,
+      },
+    }),
+  })
+  return safeJson(res) as Promise<{ id: string; status: string; invoiceUrl: string; errors?: { description: string }[] }>
 }
 
 export async function asaasGetPixQrCode(paymentId: string) {
   const res = await fetch(`${BASE}/payments/${paymentId}/pixQrCode`, { headers: headers() })
-  return res.json() as Promise<{ encodedImage: string; payload: string; expirationDate: string }>
+  return safeJson(res) as Promise<{ encodedImage: string; payload: string; expirationDate: string }>
 }
 
 export async function asaasGetPayment(paymentId: string) {
   const res = await fetch(`${BASE}/payments/${paymentId}`, { headers: headers() })
-  return res.json() as Promise<{ id: string; status: string; value: number }>
+  return safeJson(res) as Promise<{ id: string; status: string; value: number }>
 }

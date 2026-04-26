@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-const PROFESSIONALS_BY_UNIT: Record<string, string[]> = {
-  caucaia:    ['victor', 'daniele', 'eduarda', 'israel'],
-  pecem:      ['vitoria', 'christian'],
-  taiba:      ['andresa', 'erica'],
-  saogoncalo: ['anderson', 'carla'],
-}
-
 const ALL_SLOTS = ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30']
 
 const PACKAGE_DURATION: Record<string, number> = { 'banho': 30, 'banho-tosa': 45, 'spa': 60 }
@@ -30,7 +23,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'unitId e date são obrigatórios' }, { status: 400 })
   }
 
-  const professionals = PROFESSIONALS_BY_UNIT[unitId] ?? []
+  const rows = await prisma.professional.findMany({ where: { unitId, active: true }, select: { slug: true } })
+  const professionals = rows.map(r => r.slug)
   if (professionals.length === 0) {
     return NextResponse.json({ slots: ALL_SLOTS.map(time => ({ time, availableCount: 1 })) })
   }

@@ -21,9 +21,13 @@ const C = {
 }
 
 const NAV_MAIN = [
-  { href: '/admin/overview',   icon: '○', label: 'Visão Geral' },
-  { href: '/admin/agenda',     icon: '□', label: 'Agenda' },
-  { href: '/admin/dashboard',  icon: '∿', label: 'Banho & Tosa' },
+  { href: '/admin/overview', icon: '○', label: 'Visão Geral' },
+  { href: '/admin/agenda',   icon: '□', label: 'Agenda' },
+]
+
+const NAV_BANHO = [
+  { href: '/admin/dashboard', icon: '∿', label: 'Agenda Salão' },
+  { href: '/admin/staff',     icon: '◌', label: 'Equipe', adminOnly: true },
 ]
 
 const NAV_CLINICA = [
@@ -42,7 +46,6 @@ const NAV_WIP = [
   { href: '/admin/produtos',   icon: '⊞', label: 'Produtos' },
   { href: '/admin/vendas',     icon: '◈', label: 'Vendas' },
   { href: '/admin/financeiro', icon: '◑', label: 'Financeiro' },
-  { href: '/admin/staff',      icon: '◌', label: 'Equipe',  adminOnly: true },
   { href: '/admin/tenants',    icon: '⊡', label: 'Tenants', adminOnly: true },
 ]
 
@@ -136,9 +139,12 @@ export default function Sidebar() {
   const user = session?.user as Record<string, unknown> | undefined
   const isAdmin = user?.role === 'ADMIN'
   const [collapsed, setCollapsed] = useState(true)
+  const [banhoOpen, setBanhoOpen] = useState(true)
   const [clinicaOpen, setClinicaOpen] = useState(true)
   const [communityOpen, setCommunityOpen] = useState(true)
   const [wipOpen, setWipOpen] = useState(false)
+
+  const banhoItems = NAV_BANHO.filter(n => !('adminOnly' in n) || !n.adminOnly || isAdmin)
 
   const wipItems = NAV_WIP.filter(n => !('adminOnly' in n) || !n.adminOnly || isAdmin)
   const isActive = (href: string) =>
@@ -176,6 +182,18 @@ export default function Sidebar() {
         ))}
       </nav>
 
+      {/* Seção Banho & Tosa */}
+      <div style={{ padding: '8px 8px 0', borderBottom: `1px solid ${C.border}` }}>
+        <SectionHeader icon="∿" label="Banho & Tosa" collapsed={collapsed} open={banhoOpen} onToggle={() => setBanhoOpen(o => !o)} />
+        {(banhoOpen || collapsed) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 8 }}>
+            {banhoItems.map(item => (
+              <NavLink key={item.href} item={item} collapsed={collapsed} active={isActive(item.href)} />
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Seção Clínica Vet */}
       <div style={{ padding: '8px 8px 0', borderBottom: `1px solid ${C.border}` }}>
         <SectionHeader icon="+" label="Clínica Vet" collapsed={collapsed} open={clinicaOpen} onToggle={() => setClinicaOpen(o => !o)} />
@@ -211,6 +229,13 @@ export default function Sidebar() {
           </div>
         )}
       </div>
+
+      {/* Configurações */}
+      {isAdmin && (
+        <div style={{ padding: '6px 8px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <NavLink item={{ href: '/admin/settings', icon: '⚙', label: 'Configurações' }} collapsed={collapsed} active={isActive('/admin/settings')} />
+        </div>
+      )}
 
       {/* User */}
       <div style={{ padding: collapsed ? '12px 0' : '12px 14px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>

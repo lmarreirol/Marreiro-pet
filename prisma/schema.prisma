@@ -185,6 +185,7 @@ model Professional {
   unitId    String
   tenantId  String?
   active    Boolean  @default(true)
+  services  String[] @default([])
   createdAt DateTime @default(now())
 
   @@index([unitId])

@@ -57,4 +57,5 @@ export interface AppointmentPayload extends Omit<BookingData, 'date'> {
   date: string        // ISO string
   totalPrice: number
   isVip?: boolean
+  paymentMethod?: 'pix' | 'card'
 }

@@ -17,6 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.name !== undefined) data.name = body.name
   if (body.unitId !== undefined) data.unitId = body.unitId
   if (body.active !== undefined) data.active = body.active
+  if (body.services !== undefined) data.services = body.services
   const pro = await prisma.professional.update({ where: { id }, data })
   return NextResponse.json(pro)
 }

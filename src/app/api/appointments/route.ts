@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import type { AppointmentPayload } from '@/types'
-import { PROFESSIONALS_BY_UNIT } from '@/data/professionals'
-import { asaasCreateOrFindCustomer, asaasCreatePixPayment } from '@/lib/asaas'
+import { asaasCreateOrFindCustomer, asaasCreatePixPayment, asaasCreateCardPayment } from '@/lib/asaas'
 
 async function autoAssignProfessional(unitId: string, date: string, time: string): Promise<string | null> {
-  const professionals = PROFESSIONALS_BY_UNIT[unitId]
-  if (!professionals?.length) return null
+  const rows = await prisma.professional.findMany({ where: { unitId, active: true }, select: { slug: true } })
+  const professionals = rows.map(r => r.slug)
+  if (!professionals.length) return null
 
   const dateOnly = date.split('T')[0] // normaliza ISO completo ou só data
   const start = new Date(`${dateOnly}T00:00:00.000Z`)
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const {
       serviceType, package: pkg, addons, unitId, professional,
       petName, petBreed, petSize, tutorName, tutorCpf, phone, email,
-      date, time, notes, totalPrice, isVip,
+      date, time, notes, totalPrice, isVip, paymentMethod,
     } = body
 
     if (!tutorName || !phone || !petName || !unitId || !date || !time || !serviceType) {
@@ -76,30 +76,46 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Cria pagamento PIX via Asaas
+    const successUrl = `${process.env.NEXT_PUBLIC_URL}/agendamento/sucesso?id=${appointment.id}`
+    let invoiceUrl: string | null = null
+
+    // Cria pagamento via Asaas (PIX ou Cartão)
     try {
       if (tutorCpf && process.env.ASAAS_API_KEY) {
+        const apptDateOnly = appointment.appointmentDate.toISOString().split('T')[0]
+        const description = `Agendamento ${serviceType === 'grooming' ? 'Banho & Tosa' : 'Clínica'} — ${petName}`
         const customer = await asaasCreateOrFindCustomer(tutorName, tutorCpf, phone, email ?? undefined)
         if (customer?.id) {
-          const dateOnly = appointment.appointmentDate.toISOString().split('T')[0]
-          const payment = await asaasCreatePixPayment({
-            customerId: customer.id,
-            value: Number(totalPrice),
-            dueDate: dateOnly,
-            description: `Agendamento ${serviceType === 'grooming' ? 'Banho & Tosa' : 'Clínica'} — ${petName}`,
-            externalReference: appointment.id,
-          })
-          if (payment?.id) {
-            await prisma.appointment.update({ where: { id: appointment.id }, data: { paymentId: payment.id } })
+          const paymentArgs = { customerId: customer.id, value: Number(totalPrice), dueDate: apptDateOnly, description, externalReference: appointment.id }
+          if (paymentMethod === 'card') {
+            const payment = await asaasCreateCardPayment({ ...paymentArgs, successUrl })
+            if (payment?.id) {
+              invoiceUrl = payment.invoiceUrl ?? null
+              await prisma.appointment.update({ where: { id: appointment.id }, data: { paymentId: payment.id } })
+            }
+          } else {
+            const payment = await asaasCreatePixPayment(paymentArgs)
+            if (payment?.id) {
+              await prisma.appointment.update({ where: { id: appointment.id }, data: { paymentId: payment.id } })
+            }
           }
         }
       }
     } catch (asaasErr) {
-      console.warn('[Asaas] Erro ao criar pagamento PIX:', asaasErr)
+      console.error('[Asaas] Erro ao criar pagamento:', asaasErr)
     }
 
-    const checkoutUrl = `${process.env.NEXT_PUBLIC_URL}/agendamento/sucesso?id=${appointment.id}`
-    return NextResponse.json({ appointmentId: appointment.id, checkoutUrl, professional: resolvedProfessional }, { status: 201 })
+    const proRecord = resolvedProfessional
+      ? await prisma.professional.findFirst({ where: { slug: resolvedProfessional }, select: { name: true } })
+      : null
+
+    return NextResponse.json({
+      appointmentId: appointment.id,
+      checkoutUrl: successUrl,
+      invoiceUrl,
+      professional: resolvedProfessional,
+      professionalName: proRecord?.name ?? resolvedProfessional ?? null,
+    }, { status: 201 })
 
   } catch (err) {
     console.error('[POST /api/appointments]', err)

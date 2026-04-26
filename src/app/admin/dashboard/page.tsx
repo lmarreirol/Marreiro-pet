@@ -73,12 +73,16 @@ export default function Dashboard() {
   const [calMonth, setCalMonth] = useState(() => todayISO().substring(0, 7))
   const [unitFilter, setUnitFilter] = useState<string>('all')
   const [proFilter, setProFilter] = useState<string>('all')
-  const [tab, setTab] = useState<'appointments' | 'availability' | 'report' | 'settings'>('appointments')
+  const [tab, setTab] = useState<'appointments' | 'availability' | 'report'>('appointments')
   const [refreshKey, setRefreshKey] = useState(0)
   const [search, setSearch] = useState('')
   const [monthCounts, setMonthCounts] = useState<Record<string, number>>({})
   const [bookingSlot, setBookingSlot] = useState<{ slot: string; pro: string | null; unitId: string } | null>(null)
   const [bookingForm, setBookingForm] = useState({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [] as string[], notes: '', isVip: false })
+  const [dbProfessionals, setDbProfessionals] = useState<{ slug: string; name: string; unitId: string }[]>([])
+  const [smartSuggestions, setSmartSuggestions] = useState<{ time: string; professional: string; professionalName: string; score: number; reason: string }[]>([])
+  const [smartLoading, setSmartLoading] = useState(false)
+  const [smartMode, setSmartMode] = useState(false)
 
   const PKG_PRICES: Record<string, Record<string, number>> = {
     'banho':      { small: 49,  medium: 60,  large: 90  },
@@ -136,6 +140,37 @@ export default function Dashboard() {
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/admin/login')
   }, [status])
+
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    fetch('/api/admin/professionals')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setDbProfessionals(d.map((p: { slug: string; name: string; unitId: string }) => ({ slug: p.slug, name: p.name, unitId: p.unitId }))) })
+      .catch(() => {})
+  }, [status])
+
+  const runSmartSchedule = async (overrides?: { unitId?: string; pkg?: string; petSize?: string; addons?: string[] }) => {
+    const unitId = overrides?.unitId ?? bookingSlot?.unitId ?? (unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'))
+    const pkg = overrides?.pkg ?? bookingForm.pkg
+    const petSize = overrides?.petSize ?? bookingForm.petSize
+    const addons = overrides?.addons ?? bookingForm.addons
+    setSmartLoading(true)
+    setSmartSuggestions([])
+    try {
+      const res = await fetch('/api/smart-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unitId, pkg, addons, petSize, date }),
+      })
+      const json = await res.json()
+      console.log('[SmartSchedule] payload:', { unitId, pkg, petSize, addons, date })
+      console.log('[SmartSchedule] response:', json)
+      setSmartSuggestions(json.suggestions ?? [])
+    } catch (err) {
+      console.error('[SmartSchedule] error:', err)
+    }
+    finally { setSmartLoading(false) }
+  }
 
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -239,6 +274,7 @@ export default function Dashboard() {
     setBookingSaving(false)
     setBookingSlot(null)
     setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [], notes: '', isVip: false })
+    setSmartSuggestions([])
     setRefreshKey(k => k + 1)
   }
 
@@ -288,122 +324,203 @@ export default function Dashboard() {
     <div style={{ minHeight: '100vh', background: '#f0f4f8' }}>
       {/* Modal agendamento manual */}
       {bookingSlot && (
-        <div onClick={() => setBookingSlot(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, padding: 28, width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div onClick={() => { setBookingSlot(null); setSmartMode(false); setSmartSuggestions([]) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 820, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
               <div>
-                <div style={{ fontWeight: 900, fontSize: 18, color: '#0F1B2D' }}>{bookingForm.isVip && bookingSlot.slot === '' ? '⭐ Encaixe VIP' : 'Novo Agendamento'}</div>
-                <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>
-                  {bookingSlot.slot ? `${bookingSlot.slot} · ` : ''}{bookingSlot.pro ? (({ eduarda:'Eduarda',victor:'Victor',daniele:'Daniele' } as Record<string,string>)[bookingSlot.pro] ?? bookingSlot.pro) : bookingSlot.slot ? 'Sem profissional' : ''}{new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}
+                <div style={{ fontWeight: 800, fontSize: 15, color: '#0F1B2D' }}>
+                  {smartMode ? '✦ Smart Scheduling' : bookingForm.isVip && bookingSlot.slot === '' ? '⭐ Encaixe VIP' : 'Novo Agendamento'}
                 </div>
+                {bookingSlot.slot ? (
+                  <div style={{ fontSize: 12, color: '#888', marginTop: 1 }}>
+                    {bookingSlot.slot} · {new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}
+                  </div>
+                ) : smartMode ? (
+                  <div style={{ fontSize: 11, color: '#EF7720', marginTop: 1 }}>Selecione o melhor horário à esquerda</div>
+                ) : null}
               </div>
-              <button onClick={() => setBookingSlot(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#aaa' }}>×</button>
+              <button onClick={() => { setBookingSlot(null); setSmartMode(false); setSmartSuggestions([]) }} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#bbb', lineHeight: 1 }}>×</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {bookingSlot.slot === '' && (
-                <>
-                  <div>
-                    <label style={labelStyle}>Unidade *</label>
-                    <select style={inputStyle} value={bookingSlot.unitId} onChange={e => setBookingSlot(s => ({ ...s!, unitId: e.target.value }))}>
-                      {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                    </select>
+
+            {/* Body: dois painéis lado a lado */}
+            <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+
+              {/* Painel esquerdo — horário / sugestões */}
+              <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid #f3f4f6', padding: '16px 16px', overflowY: 'auto', background: '#fafafa' }}>
+
+                {/* Seleção manual de unidade/horário/profissional */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {bookingSlot.slot === '' && (
+                    <>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Unidade *</label>
+                        <select style={{ ...inputStyle, padding: '7px 10px', fontSize: 13 }} value={bookingSlot.unitId} onChange={e => setBookingSlot(s => ({ ...s!, unitId: e.target.value, pro: null }))}>
+                          {UNITS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Horário *</label>
+                        <select style={{ ...inputStyle, padding: '7px 10px', fontSize: 13 }} value={bookingSlot.slot} onChange={e => setBookingSlot(s => ({ ...s!, slot: e.target.value }))}>
+                          <option value="">Selecione</option>
+                          {(() => { const s: string[] = []; for (let h = 7; h <= 19; h++) { s.push(`${String(h).padStart(2,'0')}:00`); if (h < 19) s.push(`${String(h).padStart(2,'0')}:30`) } return s })().map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Profissional</label>
+                        <select style={{ ...inputStyle, padding: '7px 10px', fontSize: 13 }} value={bookingSlot.pro ?? ''} onChange={e => setBookingSlot(s => ({ ...s!, pro: e.target.value || null }))}>
+                          <option value="">Sem preferência</option>
+                          {dbProfessionals.filter(p => p.unitId === bookingSlot.unitId).map(p => <option key={p.slug} value={p.slug}>{p.name}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Smart suggestions */}
+                {smartMode && bookingSlot.slot === '' && (
+                  <div style={{ marginTop: bookingSlot.slot === '' ? 14 : 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#92400e', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      ✦ Melhores horários
+                    </div>
+                    {smartLoading ? (
+                      <div style={{ textAlign: 'center', padding: '16px 0', color: '#EF7720', fontSize: 12, fontWeight: 700 }}>⏳ Calculando...</div>
+                    ) : smartSuggestions.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        {smartSuggestions.map((s, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => {
+                              setBookingSlot(b => ({ ...b!, slot: s.time, pro: s.professional }))
+                              setSmartSuggestions([])
+                            }}
+                            style={{
+                              width: '100%', textAlign: 'left', padding: '9px 11px', borderRadius: 9,
+                              background: i === 0 ? '#fff7ed' : '#fff',
+                              border: `1.5px solid ${i === 0 ? '#fed7aa' : '#e5e7eb'}`,
+                              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                              boxShadow: i === 0 ? '0 1px 4px rgba(239,119,32,0.12)' : 'none',
+                            }}
+                          >
+                            <span style={{ fontWeight: 900, fontSize: 15, color: '#004A99', minWidth: 42, flexShrink: 0 }}>{s.time}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: 11, color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.professionalName}</div>
+                              <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.reason}</div>
+                            </div>
+                            {i === 0 && <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 20, background: '#EF7720', color: '#fff', flexShrink: 0 }}>★</span>}
+                          </button>
+                        ))}
+                        <button type="button" onClick={() => runSmartSchedule()} style={{ background: 'none', border: 'none', fontSize: 10, color: '#EF7720', cursor: 'pointer', fontWeight: 700, padding: '4px 0', textAlign: 'left' }}>
+                          ↺ Recalcular
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '10px 0', color: '#9ca3af', fontSize: 11 }}>
+                        Nenhuma sugestão.
+                        <button type="button" onClick={() => runSmartSchedule()} style={{ display: 'block', margin: '4px auto 0', background: 'none', border: 'none', fontSize: 10, color: '#EF7720', cursor: 'pointer', fontWeight: 700 }}>↺ Tentar novamente</button>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label style={labelStyle}>Horário *</label>
-                    <select style={inputStyle} value={bookingSlot.slot} onChange={e => setBookingSlot(s => ({ ...s!, slot: e.target.value }))}>
-                      <option value="">Selecione o horário</option>
-                      {(() => { const s: string[] = []; for (let h = 7; h <= 19; h++) { s.push(`${String(h).padStart(2,'0')}:00`); if (h < 19) s.push(`${String(h).padStart(2,'0')}:30`) } return s })().map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
+                )}
+              </div>
+
+              {/* Painel direito — dados do agendamento */}
+              <div style={{ flex: 1, padding: '16px 20px', overflowY: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+
                   <div style={{ gridColumn: '1/-1' }}>
-                    <label style={labelStyle}>Profissional</label>
-                    <select style={inputStyle} value={bookingSlot.pro ?? ''} onChange={e => setBookingSlot(s => ({ ...s!, pro: e.target.value || null }))}>
-                      <option value="">Sem preferência</option>
-                      {Object.entries(PROFESSIONALS).flatMap(([uid, pros]) =>
-                        pros.map(p => <option key={p.id} value={p.id}>{p.name} ({UNITS.find(u => u.id === uid)?.name ?? uid})</option>)
-                      )}
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Pet *</label>
+                    <input style={{ ...inputStyle, padding: '7px 10px', fontSize: 13 }} placeholder="Nome do pet" value={bookingForm.petName} onChange={e => setBookingForm(f => ({...f, petName: e.target.value}))} autoFocus />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Raça</label>
+                    <input style={{ ...inputStyle, padding: '7px 10px', fontSize: 13 }} placeholder="SRD, Border…" value={bookingForm.petBreed} onChange={e => setBookingForm(f => ({...f, petBreed: e.target.value}))} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Porte</label>
+                    <select style={{ ...inputStyle, padding: '7px 10px', fontSize: 13 }} value={bookingForm.petSize} onChange={e => setBookingForm(f => ({...f, petSize: e.target.value}))}>
+                      <option value="small">Pequeno</option>
+                      <option value="medium">Médio</option>
+                      <option value="large">Grande</option>
                     </select>
                   </div>
-                </>
-              )}
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={labelStyle}>Nome do pet *</label>
-                <input style={inputStyle} placeholder="Ex: Bolinha" value={bookingForm.petName} onChange={e => setBookingForm(f => ({...f, petName: e.target.value}))} autoFocus />
-              </div>
-              <div>
-                <label style={labelStyle}>Raça</label>
-                <input style={inputStyle} placeholder="Ex: SRD, Border Collie" value={bookingForm.petBreed} onChange={e => setBookingForm(f => ({...f, petBreed: e.target.value}))} />
-              </div>
-              <div>
-                <label style={labelStyle}>Porte</label>
-                <select style={inputStyle} value={bookingForm.petSize} onChange={e => setBookingForm(f => ({...f, petSize: e.target.value}))}>
-                  <option value="small">Pequeno</option>
-                  <option value="medium">Médio</option>
-                  <option value="large">Grande</option>
-                </select>
-              </div>
-              <div>
-                <label style={labelStyle}>Tutor *</label>
-                <input style={inputStyle} placeholder="Nome do tutor" value={bookingForm.tutorName} onChange={e => setBookingForm(f => ({...f, tutorName: e.target.value}))} />
-              </div>
-              <div>
-                <label style={labelStyle}>CPF do tutor *</label>
-                <input style={{ ...inputStyle, borderColor: bookingForm.cpf && bookingForm.cpf.replace(/\D/g,'').length < 11 ? '#fca5a5' : bookingForm.cpf.replace(/\D/g,'').length === 11 ? '#86efac' : '#e5e7eb' }}
-                  placeholder="000.000.000-00"
-                  value={bookingForm.cpf}
-                  maxLength={14}
-                  onChange={e => {
-                    const raw = e.target.value.replace(/\D/g, '').slice(0, 11)
-                    const fmt = raw.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, (_,a,b,c,d) => d ? `${a}.${b}.${c}-${d}` : c ? `${a}.${b}.${c}` : b ? `${a}.${b}` : a)
-                    setBookingForm(f => ({...f, cpf: fmt}))
-                  }}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Telefone</label>
-                <input style={inputStyle} placeholder="(85) 9 9999-9999" value={bookingForm.phone} onChange={e => setBookingForm(f => ({...f, phone: e.target.value}))} />
-              </div>
-              <div>
-                <label style={labelStyle}>Pacote</label>
-                <select style={inputStyle} value={bookingForm.pkg} onChange={e => setBookingForm(f => ({...f, pkg: e.target.value}))}>
-                  <option value="banho">Banho Tradicional</option>
-                  <option value="banho-tosa">Banho + Tosa Higiênica</option>
-                  <option value="spa">Tosa Completa + Banho</option>
-                </select>
-              </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={labelStyle}>Serviços extras</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                  {Object.entries(ADDONS).map(([id, label]) => {
-                    const checked = bookingForm.addons.includes(id)
-                    return (
-                      <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, border: `1.5px solid ${checked ? '#EF7720' : '#e5e7eb'}`, background: checked ? '#fff4ed' : '#fff', cursor: 'pointer', fontSize: 13, fontWeight: checked ? 700 : 400, color: checked ? '#EF7720' : '#555', userSelect: 'none' }}>
-                        <input type="checkbox" checked={checked} onChange={() => setBookingForm(f => ({ ...f, addons: checked ? f.addons.filter(a => a !== id) : [...f.addons, id] }))} style={{ display: 'none' }} />
-                        {label}
-                      </label>
-                    )
-                  })}
+
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Tutor *</label>
+                    <input style={{ ...inputStyle, padding: '7px 10px', fontSize: 13 }} placeholder="Nome do tutor" value={bookingForm.tutorName} onChange={e => setBookingForm(f => ({...f, tutorName: e.target.value}))} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>CPF *</label>
+                    <input
+                      style={{ ...inputStyle, padding: '7px 10px', fontSize: 13, borderColor: bookingForm.cpf && bookingForm.cpf.replace(/\D/g,'').length < 11 ? '#fca5a5' : bookingForm.cpf.replace(/\D/g,'').length === 11 ? '#86efac' : '#e5e7eb' }}
+                      placeholder="000.000.000-00" value={bookingForm.cpf} maxLength={14}
+                      onChange={e => {
+                        const raw = e.target.value.replace(/\D/g, '').slice(0, 11)
+                        const fmt = raw.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, (_,a,b,c,d) => d ? `${a}.${b}.${c}-${d}` : c ? `${a}.${b}.${c}` : b ? `${a}.${b}` : a)
+                        setBookingForm(f => ({...f, cpf: fmt}))
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Telefone</label>
+                    <input style={{ ...inputStyle, padding: '7px 10px', fontSize: 13 }} placeholder="(85) 9 9999-9999" value={bookingForm.phone} onChange={e => setBookingForm(f => ({...f, phone: e.target.value}))} />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Pacote</label>
+                    <select style={{ ...inputStyle, padding: '7px 10px', fontSize: 13 }} value={bookingForm.pkg} onChange={e => setBookingForm(f => ({...f, pkg: e.target.value}))}>
+                      <option value="banho">Banho</option>
+                      <option value="banho-tosa">Banho + Tosa</option>
+                      <option value="spa">Tosa Completa</option>
+                    </select>
+                  </div>
+
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 4 }}>Extras</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {Object.entries(ADDONS).map(([id, label]) => {
+                        const checked = bookingForm.addons.includes(id)
+                        return (
+                          <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, border: `1.5px solid ${checked ? '#EF7720' : '#e5e7eb'}`, background: checked ? '#fff4ed' : '#fafafa', cursor: 'pointer', fontSize: 12, fontWeight: checked ? 700 : 400, color: checked ? '#EF7720' : '#666', userSelect: 'none' }}>
+                            <input type="checkbox" checked={checked} onChange={() => setBookingForm(f => ({ ...f, addons: checked ? f.addons.filter(a => a !== id) : [...f.addons, id] }))} style={{ display: 'none' }} />
+                            {label}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f0f7ff', borderRadius: 10, padding: '10px 14px', border: '1px solid #dbeafe' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#555' }}>
+                      <input type="checkbox" checked={bookingForm.isVip} onChange={e => setBookingForm(f => ({...f, isVip: e.target.checked}))} style={{ width: 15, height: 15, accentColor: '#EF7720', cursor: 'pointer' }} />
+                      ⭐ VIP
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ fontSize: 11, color: '#888', fontWeight: 600 }}>Total</span>
+                      <span style={{ fontSize: 20, fontWeight: 900, color: '#004A99' }}>R$ {calcBookingTotal(bookingForm).toFixed(2).replace('.', ',')}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Obs.</label>
+                    <textarea style={{ ...inputStyle, padding: '7px 10px', fontSize: 13, height: 52, resize: 'vertical' }} placeholder="Observações..." value={bookingForm.notes} onChange={e => setBookingForm(f => ({...f, notes: e.target.value}))} />
+                  </div>
                 </div>
               </div>
-              <div style={{ gridColumn: '1/-1', background: 'linear-gradient(135deg, #004A99, #0066cc)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 600 }}>Total calculado</div>
-                <div style={{ color: '#fff', fontSize: 24, fontWeight: 900 }}>R$ {calcBookingTotal(bookingForm).toFixed(2).replace('.', ',')}</div>
-              </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={labelStyle}>Observações</label>
-                <textarea style={{ ...inputStyle, height: 64, resize: 'vertical' }} placeholder="Observações adicionais..." value={bookingForm.notes} onChange={e => setBookingForm(f => ({...f, notes: e.target.value}))} />
-              </div>
-              <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input type="checkbox" id="vip-check" checked={bookingForm.isVip} onChange={e => setBookingForm(f => ({...f, isVip: e.target.checked}))} style={{ width: 16, height: 16, accentColor: '#EF7720', cursor: 'pointer' }} />
-                <label htmlFor="vip-check" style={{ fontSize: 13, fontWeight: 600, color: '#555', cursor: 'pointer' }}>⭐ Encaixe VIP</label>
-              </div>
             </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-              <button onClick={createManualBooking} disabled={!bookingForm.petName || !bookingForm.tutorName || bookingForm.cpf.replace(/\D/g,'').length !== 11 || !bookingSlot.slot || bookingSaving}
-                style={{ flex: 1, padding: '13px', borderRadius: 12, background: '#004A99', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer', border: 'none', opacity: (!bookingForm.petName || !bookingForm.tutorName || bookingForm.cpf.replace(/\D/g,'').length !== 11 || !bookingSlot.slot) ? 0.5 : 1 }}>
-                {bookingSaving ? 'Salvando...' : 'Confirmar Agendamento'}
+
+            {/* Footer */}
+            <div style={{ display: 'flex', gap: 8, padding: '12px 20px', borderTop: '1px solid #f3f4f6', flexShrink: 0 }}>
+              <button onClick={createManualBooking}
+                disabled={!bookingForm.petName || !bookingForm.tutorName || bookingForm.cpf.replace(/\D/g,'').length !== 11 || !bookingSlot.slot || bookingSaving}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', border: 'none', opacity: (!bookingForm.petName || !bookingForm.tutorName || bookingForm.cpf.replace(/\D/g,'').length !== 11 || !bookingSlot.slot) ? 0.5 : 1 }}>
+                {bookingSaving ? 'Salvando...' : 'Confirmar agendamento'}
               </button>
-              <button onClick={() => setBookingSlot(null)} style={{ padding: '13px 18px', borderRadius: 12, background: '#f0f4f8', color: '#555', fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none' }}>Cancelar</button>
+              <button onClick={() => { setBookingSlot(null); setSmartMode(false); setSmartSuggestions([]) }} style={{ padding: '10px 20px', borderRadius: 10, background: '#f0f4f8', color: '#666', fontWeight: 600, fontSize: 13, cursor: 'pointer', border: 'none' }}>Cancelar</button>
             </div>
           </div>
         </div>
@@ -635,11 +752,6 @@ export default function Dashboard() {
             {t === 'appointments' ? 'Agendamentos' : t === 'availability' ? 'Disponibilidade' : 'Relatório de Agenda'}
           </button>
         ))}
-        {isAdmin && (
-          <button onClick={() => setTab('settings')} title="Configurações" style={{ marginLeft: 'auto', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', borderBottom: tab === 'settings' ? '2px solid #004A99' : '2px solid transparent', color: tab === 'settings' ? '#004A99' : '#666', fontSize: 20, display: 'flex', alignItems: 'center' }}>
-            ⚙️
-          </button>
-        )}
       </div>
 
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 16px' }}>
@@ -728,6 +840,26 @@ export default function Dashboard() {
                         <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: 15, color: '#bbb', cursor: 'pointer', lineHeight: 1 }}>×</button>
                       )}
                     </div>
+
+                    {/* Smart Scheduling */}
+                    <button
+                      onClick={() => {
+                        const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia')
+                        setBookingForm({ petName: '', petBreed: '', petSize: 'medium', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [], notes: '', isVip: false })
+                        setBookingSlot({ slot: '', pro: null, unitId: u })
+                        setSmartMode(true)
+                        runSmartSchedule({ unitId: u, pkg: 'banho', petSize: 'medium', addons: [] })
+                      }}
+                      style={{
+                        width: '100%', marginTop: 12, padding: '9px 10px', borderRadius: 9,
+                        background: 'linear-gradient(135deg, #EF7720, #f59e0b)',
+                        color: '#fff', border: 'none', cursor: 'pointer',
+                        fontWeight: 800, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                        boxShadow: '0 2px 8px rgba(239,119,32,0.35)',
+                      }}
+                    >
+                      ✦ Smart Scheduling
+                    </button>
                   </div>
                 )
               })()}
@@ -744,7 +876,6 @@ export default function Dashboard() {
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => { const dt = new Date(date+'T12:00:00'); dt.setDate(dt.getDate()-1); const iso = dt.toISOString().split('T')[0]; setDate(iso); setCalMonth(iso.substring(0,7)) }} style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>‹</button>
                     <button onClick={() => { const dt = new Date(date+'T12:00:00'); dt.setDate(dt.getDate()+1); const iso = dt.toISOString().split('T')[0]; setDate(iso); setCalMonth(iso.substring(0,7)) }} style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>›</button>
-                    <button onClick={() => { const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'); setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [], notes: '', isVip: false }); setBookingSlot({ slot: '', pro: null, unitId: u }) }} title="Novo agendamento" style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#004A99', color: '#fff', cursor: 'pointer', fontSize: 20, fontWeight: 900, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                     <button onClick={() => { const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'); setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [], notes: '', isVip: true }); setBookingSlot({ slot: '', pro: null, unitId: u }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 800 }}>
                       ⭐ Encaixe VIP
                     </button>
@@ -924,9 +1055,6 @@ export default function Dashboard() {
           <ReportTab isAdmin={isAdmin} userUnitId={user?.unitId} />
         )}
 
-        {tab === 'settings' && (
-          <SettingsTab />
-        )}
       </div>
     </div>
   )
@@ -1953,347 +2081,4 @@ function BlogTab() {
   )
 }
 
-type UserRow = { id: string; username: string; name: string; role: string; unitId: string | null }
 type ProRow = { id: string; slug: string; name: string; unitId: string; active: boolean }
-
-function SettingsTab() {
-  const [settingsTab, setSettingsTab] = useState<'users' | 'professionals'>('users')
-  const [users, setUsers] = useState<UserRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [editingUser, setEditingUser] = useState<UserRow | null>(null)
-  const [editForm, setEditForm] = useState({ name: '', role: 'RECEPTIONIST', unitId: '', password: '' })
-  const [editSaving, setEditSaving] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [createForm, setCreateForm] = useState({ username: '', name: '', password: '', role: 'RECEPTIONIST', unitId: '' })
-  const [createSaving, setCreateSaving] = useState(false)
-  const [createError, setCreateError] = useState('')
-
-  const UNIT_OPTIONS = [
-    { id: '', label: '— Sem unidade (Admin) —' },
-    { id: 'caucaia', label: 'Caucaia' },
-    { id: 'pecem', label: 'Pecém' },
-    { id: 'saogoncalo', label: 'São Gonçalo' },
-    { id: 'taiba', label: 'Taíba' },
-  ]
-
-  const load = () => {
-    setLoading(true)
-    fetch('/api/admin/users').then(r => r.json()).then(d => { setUsers(d); setLoading(false) }).catch(() => setLoading(false))
-  }
-
-  useEffect(() => { load() }, [])
-
-  const openEdit = (u: UserRow) => {
-    setEditingUser(u)
-    setEditForm({ name: u.name, role: u.role, unitId: u.unitId ?? '', password: '' })
-  }
-
-  const saveEdit = async () => {
-    if (!editingUser) return
-    setEditSaving(true)
-    const body: Record<string, string> = { name: editForm.name, role: editForm.role, unitId: editForm.unitId }
-    if (editForm.password) body.password = editForm.password
-    await fetch(`/api/admin/users/${editingUser.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    })
-    setEditSaving(false)
-    setEditingUser(null)
-    load()
-  }
-
-  const deleteUser = async (u: UserRow) => {
-    if (!window.confirm(`Deletar o usuário "${u.username}"? Esta ação não pode ser desfeita.`)) return
-    await fetch(`/api/admin/users/${u.id}`, { method: 'DELETE' })
-    load()
-  }
-
-  const saveCreate = async () => {
-    setCreateError('')
-    if (!createForm.username || !createForm.password) { setCreateError('Usuário e senha são obrigatórios.'); return }
-    setCreateSaving(true)
-    const res = await fetch('/api/admin/users', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...createForm, unitId: createForm.unitId || null }),
-    })
-    const data = await res.json()
-    setCreateSaving(false)
-    if (!res.ok) { setCreateError(data.error ?? 'Erro ao criar usuário'); return }
-    setCreating(false)
-    setCreateForm({ username: '', name: '', password: '', role: 'RECEPTIONIST', unitId: '' })
-    load()
-  }
-
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }
-  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 4, display: 'block' }
-
-  return (
-    <div style={{ maxWidth: 900 }}>
-      {/* Sub-abas */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#f1f5f9', borderRadius: 12, padding: 4, width: 'fit-content' }}>
-        {[{ id: 'users', label: '👥 Usuários' }, { id: 'professionals', label: '✂️ Profissionais' }].map(t => (
-          <button key={t.id} onClick={() => setSettingsTab(t.id as 'users' | 'professionals')} style={{ padding: '8px 18px', borderRadius: 9, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: settingsTab === t.id ? '#fff' : 'transparent', color: settingsTab === t.id ? '#004A99' : '#888', boxShadow: settingsTab === t.id ? '0 1px 4px rgba(0,0,0,0.10)' : 'none' }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {settingsTab === 'users' && <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F1B2D', margin: 0 }}>Gerenciar Usuários</h2>
-        <button onClick={() => setCreating(true)} style={{ padding: '10px 20px', borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>
-          + Novo usuário
-        </button>
-      </div>
-
-      {loading ? <p style={{ color: '#888' }}>Carregando...</p> : (
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>
-                {['Usuário', 'Nome', 'Função', 'Unidade', ''].map(h => (
-                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#888' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u, i) => (
-                <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                  <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 700, color: '#0F1B2D' }}>{u.username}</td>
-                  <td style={{ padding: '14px 16px', fontSize: 14, color: '#444' }}>{u.name}</td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: u.role === 'ADMIN' ? '#EFF6FF' : '#F0FDF4', color: u.role === 'ADMIN' ? '#1D4ED8' : '#15803D' }}>
-                      {u.role === 'ADMIN' ? 'Admin' : 'Recepcionista'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '14px 16px', fontSize: 13, color: '#666' }}>
-                    {u.unitId ? ({ caucaia: 'Caucaia', pecem: 'Pecém', saogoncalo: 'São Gonçalo', taiba: 'Taíba' } as Record<string, string>)[u.unitId] ?? u.unitId : '—'}
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <button onClick={() => openEdit(u)} style={{ padding: '6px 14px', borderRadius: 8, background: '#f1f5f9', color: '#0F1B2D', fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer' }}>Editar</button>
-                      <button onClick={() => deleteUser(u)} style={{ padding: '6px 14px', borderRadius: 8, background: '#fff', color: '#dc2626', fontWeight: 700, fontSize: 12, border: '1.5px solid #dc2626', cursor: 'pointer' }}>Remover</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {editingUser && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: '100%', maxWidth: 440, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: '#0F1B2D' }}>Editar: {editingUser.username}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div><label style={labelStyle}>Nome</label><input style={inputStyle} value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></div>
-              <div><label style={labelStyle}>Função</label>
-                <select style={inputStyle} value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}>
-                  <option value="ADMIN">Admin</option>
-                  <option value="RECEPTIONIST">Recepcionista</option>
-                </select>
-              </div>
-              <div><label style={labelStyle}>Unidade</label>
-                <select style={inputStyle} value={editForm.unitId} onChange={e => setEditForm(f => ({ ...f, unitId: e.target.value }))}>
-                  {UNIT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-              </div>
-              <div><label style={labelStyle}>Nova senha (deixe em branco para não alterar)</label><input style={inputStyle} type="password" placeholder="••••••••" value={editForm.password} onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))} /></div>
-            </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-              <button onClick={() => setEditingUser(null)} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#f1f5f9', color: '#444', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>Cancelar</button>
-              <button onClick={saveEdit} disabled={editSaving} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', opacity: editSaving ? 0.7 : 1 }}>{editSaving ? 'Salvando...' : 'Salvar'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {creating && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: '100%', maxWidth: 440, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: '#0F1B2D' }}>Novo Usuário</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div><label style={labelStyle}>Usuário (login)</label><input style={inputStyle} placeholder="ex: maria" value={createForm.username} onChange={e => setCreateForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/\s/g, '') }))} /></div>
-              <div><label style={labelStyle}>Nome completo</label><input style={inputStyle} placeholder="Maria Silva" value={createForm.name} onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))} /></div>
-              <div><label style={labelStyle}>Senha</label><input style={inputStyle} type="password" placeholder="••••••••" value={createForm.password} onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))} /></div>
-              <div><label style={labelStyle}>Função</label>
-                <select style={inputStyle} value={createForm.role} onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}>
-                  <option value="ADMIN">Admin</option>
-                  <option value="RECEPTIONIST">Recepcionista</option>
-                </select>
-              </div>
-              <div><label style={labelStyle}>Unidade</label>
-                <select style={inputStyle} value={createForm.unitId} onChange={e => setCreateForm(f => ({ ...f, unitId: e.target.value }))}>
-                  {UNIT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-              </div>
-              {createError && <p style={{ color: '#dc2626', fontSize: 13, margin: 0 }}>{createError}</p>}
-            </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-              <button onClick={() => { setCreating(false); setCreateError('') }} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#f1f5f9', color: '#444', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>Cancelar</button>
-              <button onClick={saveCreate} disabled={createSaving} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', opacity: createSaving ? 0.7 : 1 }}>{createSaving ? 'Criando...' : 'Criar usuário'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-      </>}
-
-      {settingsTab === 'professionals' && <ProfessionalsTab />}
-    </div>
-  )
-}
-
-function ProfessionalsTab() {
-  const [pros, setPros] = useState<ProRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [editingPro, setEditingPro] = useState<ProRow | null>(null)
-  const [editForm, setEditForm] = useState({ name: '', unitId: '', active: true })
-  const [editSaving, setEditSaving] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [createForm, setCreateForm] = useState({ name: '', slug: '', unitId: 'caucaia' })
-  const [createSaving, setCreateSaving] = useState(false)
-  const [createError, setCreateError] = useState('')
-
-  const UNIT_LABELS: Record<string, string> = { caucaia: 'Caucaia', pecem: 'Pecém', saogoncalo: 'São Gonçalo', taiba: 'Taíba' }
-  const UNIT_OPTIONS = Object.entries(UNIT_LABELS).map(([id, label]) => ({ id, label }))
-
-  const load = () => {
-    setLoading(true)
-    fetch('/api/admin/professionals').then(r => r.json()).then(d => { setPros(d); setLoading(false) }).catch(() => setLoading(false))
-  }
-  useEffect(() => { load() }, [])
-
-  const openEdit = (p: ProRow) => { setEditingPro(p); setEditForm({ name: p.name, unitId: p.unitId, active: p.active }) }
-
-  const saveEdit = async () => {
-    if (!editingPro) return
-    setEditSaving(true)
-    await fetch(`/api/admin/professionals/${editingPro.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editForm) })
-    setEditSaving(false); setEditingPro(null); load()
-  }
-
-  const deletePro = async (p: ProRow) => {
-    if (!window.confirm(`Remover "${p.name}"? Os agendamentos existentes não serão afetados.`)) return
-    await fetch(`/api/admin/professionals/${p.id}`, { method: 'DELETE' })
-    load()
-  }
-
-  const toggleActive = async (p: ProRow) => {
-    await fetch(`/api/admin/professionals/${p.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !p.active }) })
-    load()
-  }
-
-  const saveCreate = async () => {
-    setCreateError('')
-    if (!createForm.name || !createForm.slug || !createForm.unitId) { setCreateError('Todos os campos são obrigatórios.'); return }
-    setCreateSaving(true)
-    const res = await fetch('/api/admin/professionals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(createForm) })
-    const data = await res.json()
-    setCreateSaving(false)
-    if (!res.ok) { setCreateError(data.error ?? 'Erro ao criar'); return }
-    setCreating(false); setCreateForm({ name: '', slug: '', unitId: 'caucaia' }); load()
-  }
-
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }
-  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 4, display: 'block' }
-
-  const grouped = Object.entries(UNIT_LABELS).map(([unitId, unitName]) => ({
-    unitId, unitName, pros: pros.filter(p => p.unitId === unitId)
-  }))
-
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F1B2D', margin: 0 }}>Profissionais</h2>
-        <button onClick={() => setCreating(true)} style={{ padding: '10px 20px', borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>
-          + Novo profissional
-        </button>
-      </div>
-
-      {loading ? <p style={{ color: '#888' }}>Carregando...</p> : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-          {grouped.map(({ unitId, unitName, pros: unitPros }) => (
-            <div key={unitId} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-              <div style={{ background: '#004A99', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 800, fontSize: 14, color: '#fff' }}>📍 {unitName}</span>
-                <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontWeight: 700, fontSize: 12, padding: '2px 8px', borderRadius: 12 }}>{unitPros.length}</span>
-              </div>
-              <div>
-                {unitPros.length === 0 ? (
-                  <div style={{ padding: '20px 16px', color: '#aaa', fontSize: 13, textAlign: 'center' }}>Nenhum profissional</div>
-                ) : unitPros.map((p, i) => (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: i < unitPros.length - 1 ? '1px solid #f1f5f9' : 'none', gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: p.active ? '#EFF6FF' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>✂️</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: p.active ? '#0F1B2D' : '#aaa' }}>{p.name}</div>
-                      <div style={{ fontSize: 11, color: '#aaa' }}>ID: {p.slug}</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <button onClick={() => toggleActive(p)} title={p.active ? 'Desativar' : 'Ativar'} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', background: p.active ? '#dcfce7' : '#f1f5f9', color: p.active ? '#15803d' : '#999' }}>
-                        {p.active ? 'Ativo' : 'Inativo'}
-                      </button>
-                      <button onClick={() => openEdit(p)} style={{ padding: '5px 10px', borderRadius: 8, background: '#f1f5f9', color: '#0F1B2D', fontWeight: 700, fontSize: 11, border: 'none', cursor: 'pointer' }}>Editar</button>
-                      <button onClick={() => deletePro(p)} style={{ padding: '5px 10px', borderRadius: 8, background: '#fff', color: '#dc2626', fontWeight: 700, fontSize: 11, border: '1.5px solid #dc2626', cursor: 'pointer' }}>✕</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Modal Editar */}
-      {editingPro && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: '#0F1B2D' }}>Editar profissional</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div><label style={labelStyle}>Nome</label><input style={inputStyle} value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></div>
-              <div><label style={labelStyle}>Unidade</label>
-                <select style={inputStyle} value={editForm.unitId} onChange={e => setEditForm(f => ({ ...f, unitId: e.target.value }))}>
-                  {UNIT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="checkbox" id="active-toggle" checked={editForm.active} onChange={e => setEditForm(f => ({ ...f, active: e.target.checked }))} style={{ width: 16, height: 16, cursor: 'pointer' }} />
-                <label htmlFor="active-toggle" style={{ fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Profissional ativo</label>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-              <button onClick={() => setEditingPro(null)} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#f1f5f9', color: '#444', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>Cancelar</button>
-              <button onClick={saveEdit} disabled={editSaving} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', opacity: editSaving ? 0.7 : 1 }}>{editSaving ? 'Salvando...' : 'Salvar'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Criar */}
-      {creating && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: '#0F1B2D' }}>Novo Profissional</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div><label style={labelStyle}>Nome completo</label><input style={inputStyle} placeholder="Ex: João Silva" value={createForm.name} onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))} /></div>
-              <div>
-                <label style={labelStyle}>ID único (slug)</label>
-                <input style={inputStyle} placeholder="ex: joao" value={createForm.slug} onChange={e => setCreateForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') }))} />
-                <div style={{ fontSize: 11, color: '#aaa', marginTop: 3 }}>Usado internamente para identificar o profissional. Só letras e hífens.</div>
-              </div>
-              <div><label style={labelStyle}>Unidade</label>
-                <select style={inputStyle} value={createForm.unitId} onChange={e => setCreateForm(f => ({ ...f, unitId: e.target.value }))}>
-                  {UNIT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-              </div>
-              {createError && <p style={{ color: '#dc2626', fontSize: 13, margin: 0 }}>{createError}</p>}
-            </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-              <button onClick={() => { setCreating(false); setCreateError('') }} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#f1f5f9', color: '#444', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>Cancelar</button>
-              <button onClick={saveCreate} disabled={createSaving} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', opacity: createSaving ? 0.7 : 1 }}>{createSaving ? 'Criando...' : 'Criar'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
