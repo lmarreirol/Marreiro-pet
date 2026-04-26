@@ -83,6 +83,7 @@ export default function Dashboard() {
   const [smartSuggestions, setSmartSuggestions] = useState<{ time: string; professional: string; professionalName: string; score: number; reason: string }[]>([])
   const [smartLoading, setSmartLoading] = useState(false)
   const [smartMode, setSmartMode] = useState(false)
+  const [smartTrigger, setSmartTrigger] = useState(0)
 
   const PKG_PRICES: Record<string, Record<string, number>> = {
     'banho':      { small: 49,  medium: 60,  large: 90  },
@@ -150,7 +151,7 @@ export default function Dashboard() {
   }, [status])
 
   const runSmartSchedule = async (overrides?: { unitId?: string; pkg?: string; petSize?: string; addons?: string[] }) => {
-    const unitId = overrides?.unitId ?? bookingSlot?.unitId ?? (unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'))
+    const unitId = overrides?.unitId ?? bookingSlot?.unitId ?? (unitFilter !== 'all' ? unitFilter : (String(user?.unitId ?? '') || 'caucaia'))
     const pkg = overrides?.pkg ?? bookingForm.pkg
     const petSize = overrides?.petSize ?? bookingForm.petSize
     const addons = overrides?.addons ?? bookingForm.addons
@@ -173,6 +174,13 @@ export default function Dashboard() {
     }
     finally { setSmartLoading(false) }
   }
+
+  // Dispara após o estado ser commitado (garante bookingSlot.unitId correto)
+  useEffect(() => {
+    if (smartTrigger === 0 || !bookingSlot || bookingSlot.slot !== '') return
+    runSmartSchedule({ unitId: bookingSlot.unitId, pkg: bookingForm.pkg, petSize: bookingForm.petSize, addons: bookingForm.addons })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [smartTrigger])
 
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -846,11 +854,11 @@ export default function Dashboard() {
                     {/* Smart Scheduling */}
                     <button
                       onClick={() => {
-                        const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia')
+                        const u = unitFilter !== 'all' ? unitFilter : (String(user?.unitId ?? '') || 'caucaia')
                         setBookingForm({ petName: '', petBreed: '', petSize: 'medium', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [], notes: '', isVip: false })
                         setBookingSlot({ slot: '', pro: null, unitId: u })
                         setSmartMode(true)
-                        runSmartSchedule({ unitId: u, pkg: 'banho', petSize: 'medium', addons: [] })
+                        setSmartTrigger(t => t + 1)
                       }}
                       style={{
                         width: '100%', marginTop: 12, padding: '9px 10px', borderRadius: 9,
