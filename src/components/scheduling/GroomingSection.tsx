@@ -158,7 +158,7 @@ function Recap({ data, total, totalBase, totalDurationMin, previewPro, previewPr
         {hasDiscount && totalBase !== total && (
           <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>{fmtBRL(totalBase)}</div>
         )}
-        <div className="recap-total-value" style={{ color: hasDiscount ? '#16a34a' : '#111827' }}>{fmtBRL(total)}</div>
+        <div className="recap-total-value" style={{ color: hasDiscount ? '#16a34a' : '#ffffff' }}>{fmtBRL(total)}</div>
         <div className="recap-total-sub">Pague com PIX ou cartão de crédito.</div>
       </div>
     </div>
