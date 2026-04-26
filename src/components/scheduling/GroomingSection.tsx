@@ -149,16 +149,14 @@ function Recap({ data, total, totalBase, totalDurationMin, previewPro, previewPr
       {data.vip && <div className="recap-row"><span className="k">⭐ Encaixe VIP</span><span className="v" style={{ color: '#EF7720', fontWeight: 800 }}>+ R$ {VIP_PRICE},00</span></div>}
 
       {hasDiscount && (
-        <div style={{ margin: '8px 0', padding: '8px 12px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>💚 Desconto</span>
-          <span style={{ fontSize: 13, fontWeight: 800, color: '#16a34a' }}>{pricingInfo!.pctChange}%</span>
+        <div style={{ margin: '8px 0', padding: '8px 12px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>💚 Desconto aplicado nesta data</span>
         </div>
       )}
 
       {hasSurcharge && (
-        <div style={{ margin: '8px 0', padding: '8px 12px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#dc2626' }}>🔴 Alta demanda</span>
-          <span style={{ fontSize: 13, fontWeight: 800, color: '#dc2626' }}>+{pricingInfo!.pctChange}%</span>
+        <div style={{ margin: '8px 0', padding: '8px 12px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#dc2626' }}>🔴 Alta demanda nesta data</span>
         </div>
       )}
 
