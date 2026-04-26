@@ -300,7 +300,7 @@ export default function GroomingSection() {
   }
 
   const canNext = () => {
-    if (step === 0) return !!data.package
+    if (step === 0) return !!data.package && !!data.size
     if (step === 1) return true
     if (step === 2) return data.professional && data.unit
     if (step === 3) return data.date && data.time

@@ -33,10 +33,15 @@ export async function GET(req: NextRequest) {
 
   if (!unitId || !startDate || !endDate) return NextResponse.json({})
 
-  // Regras ativas para esta unidade + globais
-  const rules = await prisma.priceRule.findMany({
-    where: { active: true, OR: [{ unitId }, { unitId: null }] },
-  })
+  // Regras ativas para esta unidade + globais (tabela pode não existir em produção ainda)
+  let rules: Awaited<ReturnType<typeof prisma.priceRule.findMany>> = []
+  try {
+    rules = await prisma.priceRule.findMany({
+      where: { active: true, OR: [{ unitId }, { unitId: null }] },
+    })
+  } catch (_e) {
+    // tabela ainda não migrada — continua só com fator de ocupação
+  }
 
   // Capacidade diária
   const proCount = await prisma.professional.count({ where: { unitId, active: true } })
