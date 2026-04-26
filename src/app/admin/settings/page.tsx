@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 type UserRow = { id: string; username: string; name: string; role: string; unitId: string | null }
@@ -92,8 +92,11 @@ export default function SettingsPage() {
 
   return (
     <div style={{ padding: '2rem', maxWidth: 860, margin: '0 auto' }}>
-      <div style={{ marginBottom: '1.75rem' }}>
+      <div style={{ marginBottom: '1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827', margin: 0 }}>Configurações</h1>
+        <button onClick={() => signOut({ callbackUrl: '/admin/login' })} style={{ padding: '8px 18px', borderRadius: 8, background: '#fef2f2', color: '#dc2626', fontSize: 13, fontWeight: 700, cursor: 'pointer', border: '1.5px solid #fecaca' }}>
+          ← Sair
+        </button>
       </div>
 
       {/* Abas */}

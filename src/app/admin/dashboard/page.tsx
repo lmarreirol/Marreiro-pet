@@ -818,11 +818,6 @@ export default function Dashboard() {
 
       {/* Header */}
       <div style={{ background: '#004A99', color: '#fff', padding: '8px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => signOut({ callbackUrl: '/admin/login' })} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none' }}>
-            Sair
-          </button>
-        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontWeight: 900, fontSize: 14 }}>Marreiro Pet</div>
