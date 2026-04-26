@@ -562,121 +562,163 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Modal edição de agendamento */}
+      {/* Modal edição de agendamento — layout paisagem */}
       {editingAppt && (
-        <div onClick={() => setEditingAppt(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, padding: 28, width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div onClick={() => setEditingAppt(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 820, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
               <div>
-                <div style={{ fontWeight: 900, fontSize: 18, color: '#0F1B2D' }}>Editar Agendamento</div>
-                <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>{editingAppt.appointmentTime} · {new Date(editingAppt.appointmentDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: '#0F1B2D' }}>Agendamento</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 1 }}>
+                  {editingAppt.appointmentTime} · {new Date(editingAppt.appointmentDate).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                  {editingAppt.professional && <span style={{ marginLeft: 8, color: '#A855F7' }}>· {editingAppt.professional}</span>}
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {/* Cadeado */}
                 <button onClick={() => setEditLocked(l => !l)} title={editLocked ? 'Clique para editar' : 'Bloquear edição'}
-                  style={{ background: editLocked ? '#f0f4f8' : '#fff4ed', border: `1.5px solid ${editLocked ? '#e5e7eb' : '#EF7720'}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer', fontSize: 18, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={{ background: editLocked ? '#f0f4f8' : '#fff4ed', border: `1.5px solid ${editLocked ? '#e5e7eb' : '#EF7720'}`, borderRadius: 8, padding: '6px 10px', cursor: 'pointer', fontSize: 15, lineHeight: 1 }}>
                   {editLocked ? '🔒' : '🔓'}
                 </button>
-                <button onClick={() => setEditingAppt(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#aaa' }}>×</button>
+                <button onClick={() => setEditingAppt(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#bbb', lineHeight: 1 }}>×</button>
               </div>
             </div>
 
-            {editLocked && (
-              <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#888', display: 'flex', alignItems: 'center', gap: 8 }}>
-                🔒 <span>Clique no cadeado para habilitar a edição dos campos.</span>
-              </div>
-            )}
+            {/* Body */}
+            <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div style={{ gridColumn: '1/-1', display: 'flex', gap: 12, alignItems: 'flex-end' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Nome do pet *</label>
-                  <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.petName} onChange={e => setEditForm(f => ({ ...f, petName: e.target.value }))} disabled={editLocked} />
+              {/* Painel esquerdo — info do agendamento */}
+              <div style={{ width: 260, flexShrink: 0, borderRight: '1px solid #f3f4f6', padding: '16px', overflowY: 'auto', background: '#fafafa', display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                {/* Status badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: STATUS_COLORS[editingAppt.status] + '20', color: STATUS_COLORS[editingAppt.status] }}>
+                    {STATUS_LABELS[editingAppt.status] ?? editingAppt.status}
+                  </span>
+                  {editingAppt.isVip && <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 8px', borderRadius: 20, background: '#fff7ed', color: '#EF7720' }}>⭐ VIP</span>}
                 </div>
-                <div style={{ flexShrink: 0 }}>
-                  <label style={labelStyle}>CPF do tutor</label>
-                  {editingAppt?.tutorCpf ? (
-                    <div onClick={() => {
-                      navigator.clipboard.writeText((editingAppt.tutorCpf ?? '').replace(/\D/g, ''))
-                      setCpfCopied(true)
-                      setTimeout(() => setCpfCopied(false), 2000)
-                    }} title="Clique para copiar o CPF"
-                      style={{ ...inputStyle, width: 'auto', background: '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, userSelect: 'none', color: cpfCopied ? '#16a34a' : '#0F1B2D', borderColor: cpfCopied ? '#16a34a' : '#e5e7eb', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
-                      <span style={{ fontWeight: 700, letterSpacing: 0.5 }}>{(editingAppt.tutorCpf ?? '').replace(/\D/g, '')}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: cpfCopied ? '#16a34a' : '#bbb' }}>{cpfCopied ? '✓' : '📋'}</span>
+
+                {/* CPF */}
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>CPF do tutor</div>
+                  {editingAppt.tutorCpf ? (
+                    <div onClick={() => { navigator.clipboard.writeText((editingAppt.tutorCpf ?? '').replace(/\D/g, '')); setCpfCopied(true); setTimeout(() => setCpfCopied(false), 2000) }}
+                      style={{ padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${cpfCopied ? '#86efac' : '#e5e7eb'}`, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, color: cpfCopied ? '#16a34a' : '#0F1B2D', transition: 'all 0.2s' }}>
+                      {(editingAppt.tutorCpf ?? '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                      <span style={{ fontSize: 11, color: cpfCopied ? '#16a34a' : '#bbb' }}>{cpfCopied ? '✓ Copiado' : '📋'}</span>
                     </div>
                   ) : (
-                    <div style={{ ...inputStyle, background: '#f8fafc', color: '#bbb', fontStyle: 'italic', whiteSpace: 'nowrap' }}>Não informado</div>
+                    <div style={{ padding: '7px 10px', borderRadius: 8, border: '1.5px solid #f3f4f6', background: '#f8fafc', fontSize: 13, color: '#bbb', fontStyle: 'italic' }}>Não informado</div>
                   )}
                 </div>
-              </div>
-              <div>
-                <label style={labelStyle}>Raça</label>
-                <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.petBreed} onChange={e => setEditForm(f => ({ ...f, petBreed: e.target.value }))} disabled={editLocked} />
-              </div>
-              <div>
-                <label style={labelStyle}>Porte</label>
-                <select style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.petSize} onChange={e => setEditForm(f => ({ ...f, petSize: e.target.value }))} disabled={editLocked}>
-                  <option value="small">Pequeno</option>
-                  <option value="medium">Médio</option>
-                  <option value="large">Grande</option>
-                </select>
-              </div>
-              <div>
-                <label style={labelStyle}>Tutor *</label>
-                <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.tutorName} onChange={e => setEditForm(f => ({ ...f, tutorName: e.target.value }))} disabled={editLocked} />
-              </div>
-              <div>
-                <label style={labelStyle}>Telefone</label>
-                <input style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} disabled={editLocked} />
-              </div>
-              {editingAppt?.serviceType === 'vet' ? (
-                <div style={{ gridColumn: '1/-1' }}>
-                  <label style={labelStyle}>Tipo de atendimento</label>
-                  <select style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.pkg} onChange={e => setEditForm(f => ({ ...f, pkg: e.target.value }))} disabled={editLocked}>
-                    <option value="clinico-geral">Consulta Clínico Geral</option>
-                    <option value="retorno">Retorno Veterinário</option>
-                    <option value="plantao">Consulta Plantão</option>
-                  </select>
-                </div>
-              ) : (
+
+                {/* Status selector */}
                 <div>
-                  <label style={labelStyle}>Pacote</label>
-                  <select style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.pkg} onChange={e => setEditForm(f => ({ ...f, pkg: e.target.value }))} disabled={editLocked}>
-                    <option value="banho">Banho Tradicional</option>
-                    <option value="banho-tosa">Banho + Tosa Higiênica</option>
-                    <option value="spa">Tosa Completa + Banho</option>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Status</div>
+                  <select style={{ ...inputStyle, padding: '7px 10px', fontSize: 13, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }}
+                    value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))} disabled={editLocked}>
+                    <option value="AWAITING_PAYMENT">Aguard. pagamento</option>
+                    <option value="CONFIRMED">Confirmado</option>
+                    <option value="COMPLETED">Concluído</option>
+                    <option value="CANCELLED">Cancelado</option>
                   </select>
                 </div>
-              )}
-              <div>
-                <label style={labelStyle}>Status</label>
-                <select style={{ ...inputStyle, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))} disabled={editLocked}>
-                  <option value="AWAITING_PAYMENT">Aguard. pagamento</option>
-                  <option value="CONFIRMED">Confirmado</option>
-                  <option value="COMPLETED">Concluído</option>
-                  <option value="CANCELLED">Cancelado</option>
-                </select>
+
+                {/* Total */}
+                <div style={{ background: 'linear-gradient(135deg, #004A99, #0066cc)', borderRadius: 12, padding: '12px 14px', marginTop: 'auto' }}>
+                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 600, marginBottom: 2 }}>Total calculado</div>
+                  <div style={{ color: '#fff', fontSize: 22, fontWeight: 900 }}>R$ {calcBookingTotal({ ...editForm, pkg: editForm.pkg }).toFixed(2).replace('.', ',')}</div>
+                </div>
+
+                {editLocked && (
+                  <div style={{ fontSize: 11, color: '#aaa', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                    🔒 Clique no cadeado para editar
+                  </div>
+                )}
               </div>
-              <div style={{ gridColumn: '1/-1', background: 'linear-gradient(135deg, #004A99, #0066cc)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 600 }}>Total calculado</div>
-                <div style={{ color: '#fff', fontSize: 24, fontWeight: 900 }}>R$ {calcBookingTotal({ ...editForm, pkg: editForm.pkg }).toFixed(2).replace('.', ',')}</div>
-              </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={labelStyle}>Observações</label>
-                <textarea style={{ ...inputStyle, height: 64, resize: editLocked ? 'none' : 'vertical', background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} disabled={editLocked} />
-              </div>
-              <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 8, opacity: editLocked ? 0.5 : 1 }}>
-                <input type="checkbox" id="edit-vip-check" checked={editForm.isVip} onChange={e => !editLocked && setEditForm(f => ({ ...f, isVip: e.target.checked }))} style={{ width: 16, height: 16, accentColor: '#EF7720', cursor: editLocked ? 'default' : 'pointer' }} disabled={editLocked} />
-                <label htmlFor="edit-vip-check" style={{ fontSize: 13, fontWeight: 600, color: '#555', cursor: editLocked ? 'default' : 'pointer' }}>⭐ Encaixe VIP</label>
+
+              {/* Painel direito — dados */}
+              <div style={{ flex: 1, padding: '16px 20px', overflowY: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Pet *</label>
+                    <input style={{ ...inputStyle, padding: '7px 10px', fontSize: 13, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.petName} onChange={e => setEditForm(f => ({ ...f, petName: e.target.value }))} disabled={editLocked} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Raça</label>
+                    <input style={{ ...inputStyle, padding: '7px 10px', fontSize: 13, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.petBreed} onChange={e => setEditForm(f => ({ ...f, petBreed: e.target.value }))} disabled={editLocked} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Porte</label>
+                    <select style={{ ...inputStyle, padding: '7px 10px', fontSize: 13, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.petSize} onChange={e => setEditForm(f => ({ ...f, petSize: e.target.value }))} disabled={editLocked}>
+                      <option value="small">Pequeno</option>
+                      <option value="medium">Médio</option>
+                      <option value="large">Grande</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Tutor *</label>
+                    <input style={{ ...inputStyle, padding: '7px 10px', fontSize: 13, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.tutorName} onChange={e => setEditForm(f => ({ ...f, tutorName: e.target.value }))} disabled={editLocked} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Telefone</label>
+                    <input style={{ ...inputStyle, padding: '7px 10px', fontSize: 13, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} disabled={editLocked} />
+                  </div>
+                  {editingAppt.serviceType === 'vet' ? (
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Tipo de atendimento</label>
+                      <select style={{ ...inputStyle, padding: '7px 10px', fontSize: 13, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.pkg} onChange={e => setEditForm(f => ({ ...f, pkg: e.target.value }))} disabled={editLocked}>
+                        <option value="clinico-geral">Consulta Clínico Geral</option>
+                        <option value="retorno">Retorno Veterinário</option>
+                        <option value="plantao">Consulta Plantão</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Pacote</label>
+                      <select style={{ ...inputStyle, padding: '7px 10px', fontSize: 13, background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.pkg} onChange={e => setEditForm(f => ({ ...f, pkg: e.target.value }))} disabled={editLocked}>
+                        <option value="banho">Banho Tradicional</option>
+                        <option value="banho-tosa">Banho + Tosa Higiênica</option>
+                        <option value="spa">Tosa Completa + Banho</option>
+                      </select>
+                    </div>
+                  )}
+                  {editingAppt.serviceType !== 'vet' && (
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 4 }}>Extras</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, opacity: editLocked ? 0.5 : 1 }}>
+                        {Object.entries(ADDONS).map(([id, label]) => {
+                          const checked = editForm.addons.includes(id)
+                          return (
+                            <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, border: `1.5px solid ${checked ? '#EF7720' : '#e5e7eb'}`, background: checked ? '#fff4ed' : '#fafafa', cursor: editLocked ? 'default' : 'pointer', fontSize: 12, fontWeight: checked ? 700 : 400, color: checked ? '#EF7720' : '#666', userSelect: 'none' }}>
+                              <input type="checkbox" checked={checked} disabled={editLocked} onChange={() => !editLocked && setEditForm(f => ({ ...f, addons: checked ? f.addons.filter(a => a !== id) : [...f.addons, id] }))} style={{ display: 'none' }} />
+                              {label}
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 8, opacity: editLocked ? 0.5 : 1 }}>
+                    <input type="checkbox" id="edit-vip-check" checked={editForm.isVip} onChange={e => !editLocked && setEditForm(f => ({ ...f, isVip: e.target.checked }))} style={{ width: 15, height: 15, accentColor: '#EF7720', cursor: editLocked ? 'default' : 'pointer' }} disabled={editLocked} />
+                    <label htmlFor="edit-vip-check" style={{ fontSize: 12, fontWeight: 600, color: '#555', cursor: editLocked ? 'default' : 'pointer' }}>⭐ Encaixe VIP</label>
+                  </div>
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#777', display: 'block', marginBottom: 3 }}>Obs.</label>
+                    <textarea style={{ ...inputStyle, padding: '7px 10px', fontSize: 13, height: 56, resize: editLocked ? 'none' : 'vertical', background: editLocked ? '#f8fafc' : '#fff', color: editLocked ? '#999' : '#0F1B2D' }} value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} disabled={editLocked} />
+                  </div>
+                </div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+
+            {/* Footer */}
+            <div style={{ display: 'flex', gap: 8, padding: '12px 20px', borderTop: '1px solid #f3f4f6', flexShrink: 0 }}>
               <button onClick={saveEditAppt} disabled={editLocked || !editForm.petName || !editForm.tutorName || editSaving}
-                style={{ flex: 1, padding: '13px', borderRadius: 12, background: '#004A99', color: '#fff', fontWeight: 800, fontSize: 15, cursor: editLocked ? 'not-allowed' : 'pointer', border: 'none', opacity: (editLocked || !editForm.petName || !editForm.tutorName) ? 0.4 : 1 }}>
-                {editSaving ? 'Salvando...' : 'Salvar Alterações'}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#004A99', color: '#fff', fontWeight: 800, fontSize: 14, cursor: editLocked ? 'not-allowed' : 'pointer', border: 'none', opacity: (editLocked || !editForm.petName || !editForm.tutorName) ? 0.4 : 1 }}>
+                {editSaving ? 'Salvando...' : 'Salvar alterações'}
               </button>
-              <button onClick={() => setEditingAppt(null)} style={{ padding: '13px 18px', borderRadius: 12, background: '#f0f4f8', color: '#555', fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none' }}>Fechar</button>
+              <button onClick={() => setEditingAppt(null)} style={{ padding: '10px 20px', borderRadius: 10, background: '#f0f4f8', color: '#666', fontWeight: 600, fontSize: 13, cursor: 'pointer', border: 'none' }}>Fechar</button>
             </div>
           </div>
         </div>
