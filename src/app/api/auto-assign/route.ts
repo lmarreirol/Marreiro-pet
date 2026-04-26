@@ -6,11 +6,21 @@ export async function GET(req: NextRequest) {
   const date   = searchParams.get('date')
   const time   = searchParams.get('time')
 
+  const service = searchParams.get('service')
+
   if (!unitId || !date || !time) {
     return NextResponse.json({ professional: null })
   }
 
-  const rows = await prisma.professional.findMany({ where: { unitId, active: true }, select: { slug: true } })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const proWhere: any = { unitId, active: true }
+  if (service) {
+    proWhere.OR = [
+      { services: { has: service } },
+      { services: { isEmpty: true } },
+    ]
+  }
+  const rows = await prisma.professional.findMany({ where: proWhere, select: { slug: true } })
   const professionals = rows.map(r => r.slug)
   if (!professionals.length) return NextResponse.json({ professional: null })
 

@@ -19,11 +19,21 @@ export async function GET(req: NextRequest) {
   const unitId = searchParams.get('unitId')
   const date   = searchParams.get('date')
 
+  const service = searchParams.get('service')
+
   if (!unitId || !date) {
     return NextResponse.json({ error: 'unitId e date são obrigatórios' }, { status: 400 })
   }
 
-  const rows = await prisma.professional.findMany({ where: { unitId, active: true }, select: { slug: true } })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const proWhere: any = { unitId, active: true }
+  if (service) {
+    proWhere.OR = [
+      { services: { has: service } },
+      { services: { isEmpty: true } },
+    ]
+  }
+  const rows = await prisma.professional.findMany({ where: proWhere, select: { slug: true } })
   const professionals = rows.map(r => r.slug)
   if (professionals.length === 0) {
     return NextResponse.json({ slots: ALL_SLOTS.map(time => ({ time, availableCount: 1 })) })

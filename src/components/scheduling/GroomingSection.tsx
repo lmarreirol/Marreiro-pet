@@ -207,7 +207,9 @@ export default function GroomingSection() {
       return
     }
     const dateStr = data.date.date.toISOString().split('T')[0]
-    fetch(`/api/available-slots?unitId=${data.unit}&date=${dateStr}`)
+    const params = new URLSearchParams({ unitId: data.unit, date: dateStr })
+    if (data.package) params.set('service', data.package)
+    fetch(`/api/available-slots?${params}`)
       .then(r => r.json())
       .then(d => {
         const map: Record<string, number> = {}
@@ -215,7 +217,7 @@ export default function GroomingSection() {
         setSlotAvailability(map)
       })
       .catch(() => setSlotAvailability({}))
-  }, [data.professional, data.date, data.unit])
+  }, [data.professional, data.date, data.unit, data.package])
 
   useEffect(() => {
     if (data.professional !== 'any' || !data.date || !data.time || !data.unit) {
@@ -225,14 +227,16 @@ export default function GroomingSection() {
     }
     setPreviewProStatus('loading')
     const dateStr = data.date.date.toISOString().split('T')[0]
-    fetch(`/api/auto-assign?unitId=${data.unit}&date=${dateStr}&time=${data.time}`)
+    const params = new URLSearchParams({ unitId: data.unit, date: dateStr, time: data.time })
+    if (data.package) params.set('service', data.package)
+    fetch(`/api/auto-assign?${params}`)
       .then(r => r.json())
       .then(d => {
         setPreviewPro(d.professional ?? null)
         setPreviewProStatus(d.professional ? 'found' : 'none')
       })
       .catch(() => { setPreviewPro(null); setPreviewProStatus('none') })
-  }, [data.professional, data.date, data.time, data.unit])
+  }, [data.professional, data.date, data.time, data.unit, data.package])
 
   const pkg = GROOMING_PACKAGES.find(p => p.id === data.package)
   const base = pkg && data.size ? pkg.prices[data.size] : 0
