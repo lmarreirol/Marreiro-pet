@@ -3,8 +3,16 @@ import { prisma } from '@/lib/prisma'
 import type { AppointmentPayload } from '@/types'
 import { asaasCreateOrFindCustomer, asaasCreatePixPayment, asaasCreateCardPayment } from '@/lib/asaas'
 
-async function autoAssignProfessional(unitId: string, date: string, time: string): Promise<string | null> {
-  const rows = await prisma.professional.findMany({ where: { unitId, active: true }, select: { slug: true } })
+async function autoAssignProfessional(unitId: string, date: string, time: string, service?: string | null): Promise<string | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const proWhere: any = { unitId, active: true }
+  if (service) {
+    proWhere.OR = [
+      { services: { has: service } },
+      { services: { isEmpty: true } },
+    ]
+  }
+  const rows = await prisma.professional.findMany({ where: proWhere, select: { slug: true } })
   const professionals = rows.map(r => r.slug)
   if (!professionals.length) return null
 
@@ -48,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     // Auto-atribui profissional se "Sem preferência"
     const resolvedProfessional = (professional === 'any' || !professional)
-      ? await autoAssignProfessional(unitId, dateOnly, time)
+      ? await autoAssignProfessional(unitId, dateOnly, time, pkg ?? null)
       : professional
 
     // Cria o agendamento com status AWAITING_PAYMENT
