@@ -50,30 +50,7 @@ const UNITS = [
 
 const ANY_PRO = { id: 'any', name: 'Sem preferência', sub: 'Próximo profissional disponível' }
 
-const PROFESSIONALS: Record<string, { id: string; name: string; sub: string }[]> = {
-  caucaia: [
-    ANY_PRO,
-    { id: 'victor', name: 'Victor Lopes', sub: 'Grooming' },
-    { id: 'daniele', name: 'Daniele Santos', sub: 'Banhista' },
-    { id: 'eduarda', name: 'Eduarda', sub: 'Banhista' },
-    { id: 'israel', name: 'Israel', sub: 'Banhista' },
-  ],
-  pecem: [
-    ANY_PRO,
-    { id: 'vitoria', name: 'Vitória Duraes', sub: 'Grooming' },
-    { id: 'christian', name: 'Christian Fernandes', sub: 'Banhista' },
-  ],
-  taiba: [
-    ANY_PRO,
-    { id: 'andresa', name: 'Andresa Martins', sub: 'Grooming' },
-    { id: 'erica', name: 'Erica Melo', sub: 'Banhista' },
-  ],
-  saogoncalo: [
-    ANY_PRO,
-    { id: 'anderson', name: 'Anderson Correia', sub: 'Grooming' },
-    { id: 'carla', name: 'Carla Janaina', sub: 'Banhista' },
-  ],
-}
+type ProEntry = { slug: string; name: string; services: string[] }
 
 function fmtBRL(v: number) { return 'R$ ' + v.toFixed(2).replace('.', ',') }
 
@@ -118,19 +95,19 @@ const initialState: GroomingState = {
   paymentMethod: null,
 }
 
-function Recap({ data, total, totalDurationMin, previewPro, previewProStatus }: { data: GroomingState; total: number; totalDurationMin: number; previewPro: string | null; previewProStatus: 'idle' | 'loading' | 'found' | 'none' }) {
+function Recap({ data, total, totalDurationMin, previewPro, previewProStatus, pros }: { data: GroomingState; total: number; totalDurationMin: number; previewPro: string | null; previewProStatus: 'idle' | 'loading' | 'found' | 'none'; pros: ProEntry[] }) {
   const size = GROOMING_SIZES.find(s => s.id === data.size)
   const pkg = GROOMING_PACKAGES.find(p => p.id === data.package)
   const unit = UNITS.find(u => u.id === data.unit)
-  const pro = data.unit ? (PROFESSIONALS[data.unit] ?? []).find(p => p.id === data.professional) : null
   const addons = GROOMING_ADDONS.filter(a => data.addons.includes(a.id))
+  const proBySlug = Object.fromEntries(pros.map(p => [p.slug, p.name]))
 
   const proDisplay = () => {
     if (data.vip) return 'A definir'
-    if (data.professional !== 'any') return pro?.name || '—'
+    if (data.professional !== 'any') return proBySlug[data.professional ?? ''] ?? data.professional ?? '—'
     if (previewProStatus === 'idle') return '—'
     if (previewProStatus === 'loading') return 'Verificando...'
-    if (previewProStatus === 'found' && previewPro) return PRO_NAMES[previewPro] ?? previewPro
+    if (previewProStatus === 'found' && previewPro) return proBySlug[previewPro] ?? previewPro
     return 'Sem disponibilidade neste horário'
   }
 
@@ -141,7 +118,7 @@ function Recap({ data, total, totalDurationMin, previewPro, previewProStatus }: 
       <div className={`recap-row ${!size ? 'muted' : ''}`}><span className="k">Porte</span><span className="v">{size ? `${size.name} (${size.kg})` : '—'}</span></div>
       <div className={`recap-row ${!pkg ? 'muted' : ''}`}><span className="k">Pacote</span><span className="v">{pkg?.name || '—'}</span></div>
       <div className={`recap-row ${addons.length === 0 ? 'muted' : ''}`}><span className="k">Extras</span><span className="v">{addons.length > 0 ? addons.map(a => a.name).join(', ') : 'Nenhum'}</span></div>
-      <div className={`recap-row ${previewProStatus === 'none' ? 'muted' : (!pro && previewProStatus === 'idle' ? 'muted' : '')}`}>
+      <div className={`recap-row ${previewProStatus === 'none' ? 'muted' : (data.professional === null && previewProStatus === 'idle' ? 'muted' : '')}`}>
         <span className="k">Profissional</span>
         <span className="v" style={{ display: 'flex', alignItems: 'center', gap: 6, color: previewProStatus === 'none' ? '#dc2626' : undefined }}>
           {proDisplay()}
@@ -163,13 +140,6 @@ function Recap({ data, total, totalDurationMin, previewPro, previewProStatus }: 
   )
 }
 
-const PRO_NAMES: Record<string, string> = {
-  victor: 'Victor Lopes', daniele: 'Daniele Santos', eduarda: 'Eduarda', israel: 'Israel',
-  vitoria: 'Vitória Duraes', christian: 'Christian Fernandes',
-  andresa: 'Andresa Martins', erica: 'Erica Melo',
-  anderson: 'Anderson Correia', carla: 'Carla Janaina',
-}
-
 export default function GroomingSection() {
   const [step, setStep] = useState(0)
   const [data, setData] = useState<GroomingState>(initialState)
@@ -180,6 +150,7 @@ export default function GroomingSection() {
   const [previewPro, setPreviewPro] = useState<string | null>(null)
   const [previewProStatus, setPreviewProStatus] = useState<'idle' | 'loading' | 'found' | 'none'>('idle')
   const [slotAvailability, setSlotAvailability] = useState<Record<string, number>>({})
+  const [pros, setPros] = useState<ProEntry[]>([])
   const allDates = useMemo(() => getNextDates(60), [])
   const dates = allDates.slice(dateOffset, dateOffset + 14)
   const TOTAL = 5
@@ -209,6 +180,16 @@ export default function GroomingSection() {
     const today = allDates[0]
     if (today && !today.disabled) update({ date: today })
   }, [])
+
+  useEffect(() => {
+    if (!data.unit) { setPros([]); return }
+    const params = new URLSearchParams({ unitId: data.unit })
+    if (data.package) params.set('service', data.package)
+    fetch(`/api/professionals?${params}`)
+      .then(r => r.json())
+      .then(d => setPros(d.professionals ?? []))
+      .catch(() => setPros([]))
+  }, [data.unit, data.package])
 
   useEffect(() => {
     if (!data.professional || data.professional === 'any' || !data.date) { setAvailableSlots(null); return }
@@ -429,7 +410,11 @@ export default function GroomingSection() {
                     <span className="gr-label">Profissional</span>
                     {data.unit ? (
                       <div className="pro-grid">
-                        {(PROFESSIONALS[data.unit] ?? []).map(p => (
+                        {[ANY_PRO, ...pros.map(p => ({
+                          id: p.slug,
+                          name: p.name,
+                          sub: p.services.includes('spa') ? 'Tosador' : 'Banhista',
+                        }))].map(p => (
                           <button key={p.id} type="button" className={`pro-card ${data.professional === p.id ? 'selected' : ''}`} onClick={() => update({ professional: p.id })}>
                             <div className="pro-avatar">{p.id === 'any' ? <Icon name="users" size={20} /> : p.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</div>
                             <div className="pro-meta"><div className="pro-name">{p.name}</div><div className="pro-sub">{p.sub}</div></div>
@@ -618,7 +603,7 @@ export default function GroomingSection() {
             )}
           </div>
 
-          <Recap data={data} total={total} totalDurationMin={totalDurationMin} previewPro={previewPro} previewProStatus={previewProStatus} />
+          <Recap data={data} total={total} totalDurationMin={totalDurationMin} previewPro={previewPro} previewProStatus={previewProStatus} pros={pros} />
         </div>
       </div>
     </section>
