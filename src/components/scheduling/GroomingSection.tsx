@@ -60,7 +60,7 @@ function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-const TIER_COLOR: Record<string, string> = { cheap: '#16a34a', busy: '#f59e0b', premium: '#dc2626' }
+const TIER_COLOR: Record<string, string> = { cheap: '#16a34a', normal: '#9ca3af', busy: '#f59e0b', premium: '#dc2626' }
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
@@ -499,6 +499,7 @@ export default function GroomingSection() {
                     </div>
                     {Object.keys(pricing).length > 0 && (
                       <div style={{ display: 'flex', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#9ca3af', display: 'inline-block' }} /> Normal</span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} /> Mais barato do que o normal</span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} /> Mais caro do que o normal</span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} /> Mais alto</span>
@@ -513,8 +514,8 @@ export default function GroomingSection() {
                             <div className="date-cell-day">{d.label}</div>
                             {d.day}
                             <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{d.month}</div>
-                            {pi && pi.tier !== 'normal' && (
-                              <div style={{ width: 5, height: 5, borderRadius: '50%', background: TIER_COLOR[pi.tier] ?? '#888', margin: '2px auto 0' }} />
+                            {!d.disabled && data.unit && (
+                              <div style={{ width: 5, height: 5, borderRadius: '50%', background: pi ? (TIER_COLOR[pi.tier] ?? '#9ca3af') : '#9ca3af', margin: '2px auto 0' }} />
                             )}
                           </button>
                         )
