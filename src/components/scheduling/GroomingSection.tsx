@@ -123,7 +123,9 @@ function Recap({ data, total, totalBase, totalDurationMin, previewPro, previewPr
     return 'Sem disponibilidade neste horário'
   }
 
-  const hasDiscount = pricingInfo?.tier === 'cheap'
+  const hasDiscount  = pricingInfo?.tier === 'cheap'
+  const hasSurcharge = pricingInfo?.tier === 'busy' || pricingInfo?.tier === 'premium'
+  const totalColor   = hasDiscount ? '#16a34a' : hasSurcharge ? '#dc2626' : undefined
 
   return (
     <div className="grooming-recap" id="resumo-agendamento">
@@ -153,12 +155,19 @@ function Recap({ data, total, totalBase, totalDurationMin, previewPro, previewPr
         </div>
       )}
 
+      {hasSurcharge && (
+        <div style={{ margin: '8px 0', padding: '8px 12px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#dc2626' }}>🔴 Alta demanda</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: '#dc2626' }}>+{pricingInfo!.pctChange}%</span>
+        </div>
+      )}
+
       <div className="recap-total">
         <div className="recap-total-label">Total estimado</div>
-        {hasDiscount && totalBase !== total && (
+        {(hasDiscount || hasSurcharge) && totalBase !== total && (
           <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>{fmtBRL(totalBase)}</div>
         )}
-        <div className="recap-total-value" style={{ color: hasDiscount ? '#16a34a' : '#ffffff' }}>{fmtBRL(total)}</div>
+        <div className="recap-total-value" style={{ color: totalColor }}>{fmtBRL(total)}</div>
         <div className="recap-total-sub">Pague com PIX ou cartão de crédito.</div>
       </div>
     </div>
