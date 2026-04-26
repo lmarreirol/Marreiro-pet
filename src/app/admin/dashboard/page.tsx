@@ -817,12 +817,12 @@ export default function Dashboard() {
       )}
 
       {/* Header */}
-      <div style={{ background: '#004A99', color: '#fff', padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Image src="/marreiro-logo-10.png" alt="Marreiro Pet" width={52} height={20} style={{ objectFit: 'contain' }} />
+      <div style={{ background: '#004A99', color: '#fff', padding: '8px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Image src="/marreiro-logo-10.png" alt="Marreiro Pet" width={40} height={16} style={{ objectFit: 'contain' }} />
           <div>
-            <div style={{ fontWeight: 900, fontSize: 18 }}>Marreiro Pet</div>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>{user?.name} · {isAdmin ? 'Administrador' : UNITS.find(u => u.id === user?.unitId)?.name}</div>
+            <div style={{ fontWeight: 900, fontSize: 14 }}>Marreiro Pet</div>
+            <div style={{ fontSize: 11, opacity: 0.8 }}>{user?.name} · {isAdmin ? 'Administrador' : UNITS.find(u => u.id === user?.unitId)?.name}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
