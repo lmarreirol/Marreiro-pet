@@ -63,6 +63,24 @@ type Appointment = {
 }
 
 function todayISO() { return new Date().toISOString().split('T')[0] }
+function toDateLocalD(d: Date) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }
+function getWeekDaysD(dateStr: string): string[] {
+  const [y,m,d] = dateStr.split('-').map(Number)
+  const dt = new Date(y,m-1,d)
+  const dow = dt.getDay()
+  const monday = new Date(dt)
+  monday.setDate(dt.getDate() - (dow === 0 ? 6 : dow - 1))
+  return Array.from({length:7}, (_,i) => { const day = new Date(monday); day.setDate(monday.getDate()+i); return toDateLocalD(day) })
+}
+function getMonthGridD(dateStr: string): string[] {
+  const [y,m] = dateStr.split('-').map(Number)
+  const firstDay = new Date(y,m-1,1)
+  const lastDay = new Date(y,m,0)
+  const padStart = firstDay.getDay() === 0 ? 6 : firstDay.getDay()-1
+  const padEnd = lastDay.getDay() === 0 ? 0 : 7 - lastDay.getDay()
+  return Array.from({length: padStart+lastDay.getDate()+padEnd}, (_,i) => toDateLocalD(new Date(y,m-1,1-padStart+i)))
+}
+const HOURS_DASH = Array.from({length:20}, (_,i) => { const t=480+i*30; return `${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}` })
 
 export default function Dashboard() {
   const { data: session, status } = useSession()
@@ -74,6 +92,7 @@ export default function Dashboard() {
   const [unitFilter, setUnitFilter] = useState<string>('all')
   const [proFilter, setProFilter] = useState<string>('all')
   const [tab, setTab] = useState<'appointments' | 'availability' | 'report'>('appointments')
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day')
   const [refreshKey, setRefreshKey] = useState(0)
   const [search, setSearch] = useState('')
   const [monthCounts, setMonthCounts] = useState<Record<string, number>>({})
@@ -190,14 +209,17 @@ export default function Dashboard() {
   useEffect(() => {
     if (status !== 'authenticated') return
     setLoading(true)
-    const params = new URLSearchParams({ date, role: user?.role ?? '', userUnitId: user?.unitId ?? '', serviceTypes: 'grooming' })
+    let startDate = date, endDate = date
+    if (viewMode === 'week') { const wd = getWeekDaysD(date); startDate = wd[0]; endDate = wd[6] }
+    else if (viewMode === 'month') { const [y,m] = date.split('-').map(Number); startDate = `${y}-${String(m).padStart(2,'0')}-01`; endDate = toDateLocalD(new Date(y,m,0)) }
+    const params = new URLSearchParams({ startDate, endDate, role: user?.role ?? '', userUnitId: user?.unitId ?? '', serviceTypes: 'grooming' })
     if (isAdmin && unitFilter !== 'all') params.set('unitId', unitFilter)
     if (proFilter !== 'all') params.set('professional', proFilter)
     fetch(`/api/admin/appointments?${params}`)
       .then(r => r.json())
       .then(d => { setAppointments(d.appointments ?? []); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [date, unitFilter, proFilter, status, refreshKey])
+  }, [date, viewMode, unitFilter, proFilter, status, refreshKey])
 
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -325,13 +347,11 @@ export default function Dashboard() {
     setRefreshKey(k => k + 1)
   }
 
-  const filteredAppointments = search
-    ? appointments.filter(a =>
-        a.petName.toLowerCase().includes(search.toLowerCase()) ||
-        a.tutorName.toLowerCase().includes(search.toLowerCase()) ||
-        a.phone.includes(search)
-      )
-    : appointments
+  const filteredAppointments = (() => {
+    let base = viewMode === 'day' ? appointments.filter(a => a.appointmentDate.split('T')[0] === date) : appointments
+    if (search) base = base.filter(a => a.petName.toLowerCase().includes(search.toLowerCase()) || a.tutorName.toLowerCase().includes(search.toLowerCase()) || a.phone.includes(search))
+    return base
+  })()
 
   if (status === 'loading') return <div style={{ padding: 40, textAlign: 'center' }}>Carregando...</div>
 
@@ -923,17 +943,31 @@ export default function Dashboard() {
 
               {/* ── Coluna direita: data selecionada + agenda ── */}
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                   <div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: '#0F1B2D' }}>
-                      {new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#0F1B2D', textTransform: 'capitalize' }}>
+                      {viewMode === 'day'
+                        ? new Date(date+'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+                        : viewMode === 'week'
+                          ? (() => { const wd = getWeekDaysD(date); const [sy,sm,sd] = wd[0].split('-').map(Number); const [,em,ed] = wd[6].split('-').map(Number); return sm===em ? `${sd}–${ed} ${new Date(sy,sm-1,sd).toLocaleDateString('pt-BR',{month:'long'})} ${sy}` : `${sd} ${new Date(sy,sm-1,sd).toLocaleDateString('pt-BR',{month:'short'})} – ${ed} ${new Date(sy,em-1,ed).toLocaleDateString('pt-BR',{month:'short'})} ${sy}` })()
+                          : new Date(...(date.split('-').map((v,i)=>i===1?+v-1:+v) as [number,number,number])).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})
+                      }
                     </div>
                     <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>{appointments.length} agendamento{appointments.length !== 1 ? 's' : ''}</div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => { const dt = new Date(date+'T12:00:00'); dt.setDate(dt.getDate()-1); const iso = dt.toISOString().split('T')[0]; setDate(iso); setCalMonth(iso.substring(0,7)) }} style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>‹</button>
-                    <button onClick={() => { const dt = new Date(date+'T12:00:00'); dt.setDate(dt.getDate()+1); const iso = dt.toISOString().split('T')[0]; setDate(iso); setCalMonth(iso.substring(0,7)) }} style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>›</button>
-                    <button onClick={() => { const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'); setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [], notes: '', isVip: true }); setBookingSlot({ slot: '', pro: null, unitId: u }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 800 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* View toggle */}
+                    <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 8, padding: 2, gap: 1 }}>
+                      {(['day','week','month'] as const).map(v => (
+                        <button key={v} onClick={() => setViewMode(v)} style={{ padding: '5px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 11, background: viewMode===v ? '#fff' : 'transparent', color: viewMode===v ? '#111827' : '#6b7280', boxShadow: viewMode===v ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
+                          {v==='day'?'Dia':v==='week'?'Semana':'Mês'}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Nav */}
+                    <button onClick={() => { const [y,m,d] = date.split('-').map(Number); const dt = viewMode==='month' ? new Date(y,m-2,1) : viewMode==='week' ? new Date(y,m-1,d-7) : new Date(y,m-1,d-1); const iso=toDateLocalD(dt); setDate(iso); setCalMonth(iso.substring(0,7)) }} style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>‹</button>
+                    <button onClick={() => { const [y,m,d] = date.split('-').map(Number); const dt = viewMode==='month' ? new Date(y,m,1) : viewMode==='week' ? new Date(y,m-1,d+7) : new Date(y,m-1,d+1); const iso=toDateLocalD(dt); setDate(iso); setCalMonth(iso.substring(0,7)) }} style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 16 }}>›</button>
+                    <button onClick={() => { const u = unitFilter !== 'all' ? unitFilter : (user?.unitId ?? 'caucaia'); setBookingForm({ petName: '', petBreed: '', petSize: 'small', tutorName: '', phone: '', cpf: '', pkg: 'banho', addons: [], notes: '', isVip: true }); setBookingSlot({ slot: '', pro: null, unitId: u }) }} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>
                       ⭐ Encaixe VIP
                     </button>
                   </div>
@@ -945,7 +979,110 @@ export default function Dashboard() {
             {/* Agenda Calendar */}
             {loading ? (
               <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>Carregando agendamentos...</div>
-            ) : (() => {
+            ) : viewMode === 'week' ? (() => {
+              const weekDays = getWeekDaysD(date)
+              const todayStr = todayISO()
+              const byDateSlot: Record<string, Record<string, Appointment[]>> = {}
+              for (const a of filteredAppointments) {
+                const dk = a.appointmentDate.split('T')[0]
+                const sk = a.appointmentTime.substring(0,5)
+                if (!byDateSlot[dk]) byDateSlot[dk] = {}
+                if (!byDateSlot[dk][sk]) byDateSlot[dk][sk] = []
+                byDateSlot[dk][sk].push(a)
+              }
+              return (
+                <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '52px repeat(7, 1fr)', background: '#f8fafc', borderBottom: '2px solid #e5e7eb', position: 'sticky', top: 0, zIndex: 10 }}>
+                    <div />
+                    {weekDays.map(day => {
+                      const [dy,dm,dd] = day.split('-').map(Number)
+                      const isThisDay = day === todayStr
+                      const count = Object.values(byDateSlot[day] ?? {}).flat().length
+                      return (
+                        <div key={day} style={{ padding: '8px 4px 6px', textAlign: 'center', borderLeft: '1px solid #e5e7eb' }}>
+                          <div style={{ fontSize: 10, color: isThisDay ? '#004A99' : '#9ca3af', textTransform: 'uppercase', fontWeight: 700 }}>
+                            {new Date(dy,dm-1,dd).toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','').slice(0,3)}
+                          </div>
+                          <div style={{ fontWeight: 900, color: isThisDay ? '#fff' : '#111827', background: isThisDay ? '#004A99' : 'transparent', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '2px auto', fontSize: 13 }}>
+                            {dd}
+                          </div>
+                          {count > 0 && <div style={{ fontSize: 10, fontWeight: 700, color: '#004A99' }}>{count}</div>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div style={{ overflowY: 'auto', maxHeight: 560 }}>
+                    {HOURS_DASH.map(slot => {
+                      const isHalf = slot.endsWith(':30')
+                      return (
+                        <div key={slot} style={{ display: 'grid', gridTemplateColumns: '52px repeat(7, 1fr)', minHeight: 52, borderBottom: `1px solid ${isHalf ? '#f9fafb' : '#f3f4f6'}` }}>
+                          <div style={{ paddingTop: 5, textAlign: 'right', paddingRight: 8, fontSize: '0.68rem', color: isHalf ? '#e5e7eb' : '#9ca3af', fontWeight: 600 }}>
+                            {isHalf ? '' : slot}
+                          </div>
+                          {weekDays.map(day => {
+                            const daySlotAppts = (byDateSlot[day]?.[slot]) ?? []
+                            return (
+                              <div key={day} style={{ borderLeft: '1px solid #f3f4f6', padding: '3px 4px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                {daySlotAppts.map(a => (
+                                  <button key={a.id} onClick={() => openEditAppt(a)} style={{ border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%', background: STATUS_COLORS[a.status]+'18', borderLeft: `3px solid ${STATUS_COLORS[a.status]}`, borderRadius: '0 5px 5px 0', padding: '3px 6px' }}>
+                                    <div style={{ fontWeight: 700, fontSize: '0.7rem', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {a.isVip ? '⭐ ' : ''}{a.petName}
+                                    </div>
+                                    <div style={{ fontSize: '0.62rem', color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.professional ?? '—'}</div>
+                                  </button>
+                                ))}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })() : viewMode === 'month' ? (() => {
+              const monthGrid = getMonthGridD(date)
+              const [,curM] = date.split('-').map(Number)
+              const todayStr = todayISO()
+              const byDate: Record<string, Appointment[]> = {}
+              for (const a of appointments) {
+                const dk = a.appointmentDate.split('T')[0]
+                if (!byDate[dk]) byDate[dk] = []
+                byDate[dk].push(a)
+              }
+              return (
+                <div style={{ background: '#fff', borderRadius: 16, padding: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3, marginBottom: 6 }}>
+                    {['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(d => (
+                      <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#9ca3af' }}>{d}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3 }}>
+                    {monthGrid.map(day => {
+                      const [dy,dm,dd] = day.split('-').map(Number)
+                      const isCurrentMonth = dm === curM
+                      const isThisDay = day === todayStr
+                      const dayAppts = byDate[day] ?? []
+                      return (
+                        <div key={day} onClick={() => { setDate(day); setCalMonth(day.substring(0,7)); setViewMode('day') }}
+                          style={{ minHeight: 80, borderRadius: 8, padding: '6px 6px 4px', background: isThisDay ? '#eff6ff' : '#fff', border: `1.5px solid ${isThisDay ? '#004A99' : '#e5e7eb'}`, opacity: isCurrentMonth ? 1 : 0.3, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <div style={{ fontWeight: 900, fontSize: 12, color: isThisDay ? '#fff' : '#111827', background: isThisDay ? '#004A99' : 'transparent', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {dd}
+                          </div>
+                          {dayAppts.slice(0,3).map(a => (
+                            <div key={a.id} onClick={e => { e.stopPropagation(); openEditAppt(a) }}
+                              style={{ fontSize: 9, fontWeight: 700, padding: '2px 4px', borderRadius: 4, background: STATUS_COLORS[a.status]+'18', color: STATUS_COLORS[a.status], overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {a.appointmentTime.substring(0,5)} {a.petName}
+                            </div>
+                          ))}
+                          {dayAppts.length > 3 && <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>+{dayAppts.length-3} mais</div>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })() : (() => {
               const SLOT_H = 76
               const TIME_W = 60
               const PRO_NAME_MAP: Record<string, string> = {}
