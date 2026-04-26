@@ -52,7 +52,15 @@ const ANY_PRO = { id: 'any', name: 'Sem preferência', sub: 'Próximo profission
 
 type ProEntry = { slug: string; name: string; services: string[] }
 
+type PricingInfo = { multiplier: number; pctChange: number; tier: string; label: string }
+
 function fmtBRL(v: number) { return 'R$ ' + v.toFixed(2).replace('.', ',') }
+
+function toDateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+
+const TIER_COLOR: Record<string, string> = { cheap: '#16a34a', busy: '#f59e0b', premium: '#dc2626' }
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
@@ -95,7 +103,11 @@ const initialState: GroomingState = {
   paymentMethod: null,
 }
 
-function Recap({ data, total, totalDurationMin, previewPro, previewProStatus, pros }: { data: GroomingState; total: number; totalDurationMin: number; previewPro: string | null; previewProStatus: 'idle' | 'loading' | 'found' | 'none'; pros: ProEntry[] }) {
+function Recap({ data, total, totalBase, totalDurationMin, previewPro, previewProStatus, pros, pricingInfo }: {
+  data: GroomingState; total: number; totalBase: number; totalDurationMin: number;
+  previewPro: string | null; previewProStatus: 'idle' | 'loading' | 'found' | 'none';
+  pros: ProEntry[]; pricingInfo: PricingInfo | null
+}) {
   const size = GROOMING_SIZES.find(s => s.id === data.size)
   const pkg = GROOMING_PACKAGES.find(p => p.id === data.package)
   const unit = UNITS.find(u => u.id === data.unit)
@@ -110,6 +122,9 @@ function Recap({ data, total, totalDurationMin, previewPro, previewProStatus, pr
     if (previewProStatus === 'found' && previewPro) return proBySlug[previewPro] ?? previewPro
     return 'Sem disponibilidade neste horário'
   }
+
+  const hasAdjust = pricingInfo && pricingInfo.tier !== 'normal'
+  const adjustColor = hasAdjust ? (pricingInfo!.tier === 'cheap' ? '#16a34a' : '#dc2626') : '#111827'
 
   return (
     <div className="grooming-recap" id="resumo-agendamento">
@@ -131,9 +146,25 @@ function Recap({ data, total, totalDurationMin, previewPro, previewProStatus, pr
       <div className={`recap-row ${!data.date ? 'muted' : ''}`}><span className="k">Data & hora</span><span className="v">{data.date ? `${data.date.day}/${((data.date.date.getMonth()) + 1).toString().padStart(2, '0')} às ${data.time || '—'}` : '—'}</span></div>
       {totalDurationMin > 0 && <div className="recap-row"><span className="k">Duração</span><span className="v">~{totalDurationMin} min</span></div>}
       {data.vip && <div className="recap-row"><span className="k">⭐ Encaixe VIP</span><span className="v" style={{ color: '#EF7720', fontWeight: 800 }}>+ R$ {VIP_PRICE},00</span></div>}
+
+      {/* Ajuste de preço dinâmico */}
+      {hasAdjust && (
+        <div style={{ margin: '8px 0', padding: '8px 12px', borderRadius: 8, background: pricingInfo!.tier === 'cheap' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${pricingInfo!.tier === 'cheap' ? '#bbf7d0' : '#fecaca'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: adjustColor }}>
+            {pricingInfo!.tier === 'cheap' ? '💚' : '🔴'} {pricingInfo!.label}
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: adjustColor }}>
+            {pricingInfo!.pctChange > 0 ? '+' : ''}{pricingInfo!.pctChange}%
+          </span>
+        </div>
+      )}
+
       <div className="recap-total">
         <div className="recap-total-label">Total estimado</div>
-        <div className="recap-total-value">{fmtBRL(total)}</div>
+        {hasAdjust && totalBase !== total && (
+          <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>{fmtBRL(totalBase)}</div>
+        )}
+        <div className="recap-total-value" style={{ color: adjustColor }}>{fmtBRL(total)}</div>
         <div className="recap-total-sub">Pague com PIX ou cartão de crédito.</div>
       </div>
     </div>
@@ -151,6 +182,7 @@ export default function GroomingSection() {
   const [previewProStatus, setPreviewProStatus] = useState<'idle' | 'loading' | 'found' | 'none'>('idle')
   const [slotAvailability, setSlotAvailability] = useState<Record<string, number>>({})
   const [pros, setPros] = useState<ProEntry[]>([])
+  const [pricing, setPricing] = useState<Record<string, PricingInfo>>({})
   const allDates = useMemo(() => getNextDates(60), [])
   const dates = allDates.slice(dateOffset, dateOffset + 14)
   const TOTAL = 5
@@ -190,6 +222,16 @@ export default function GroomingSection() {
       .then(d => setPros(d.professionals ?? []))
       .catch(() => setPros([]))
   }, [data.unit, data.package])
+
+  useEffect(() => {
+    if (!data.unit || allDates.length === 0) { setPricing({}); return }
+    const startDate = toDateStr(allDates[0].date)
+    const endDate   = toDateStr(allDates[allDates.length - 1].date)
+    fetch(`/api/pricing?unitId=${data.unit}&startDate=${startDate}&endDate=${endDate}`)
+      .then(r => r.json())
+      .then(d => setPricing(d ?? {}))
+      .catch(() => setPricing({}))
+  }, [data.unit, allDates])
 
   useEffect(() => {
     if (!data.professional || data.professional === 'any' || !data.date) { setAvailableSlots(null); return }
@@ -242,7 +284,11 @@ export default function GroomingSection() {
   const base = pkg && data.size ? pkg.prices[data.size] : 0
   const selectedAddons = GROOMING_ADDONS.filter(a => data.addons.includes(a.id))
   const addonsTotal = selectedAddons.reduce((s, a) => s + a.price, 0)
-  const total = base + addonsTotal + (data.vip ? VIP_PRICE : 0)
+  const selectedDateStr = data.date ? toDateStr(data.date.date) : null
+  const activePricingInfo = selectedDateStr ? (pricing[selectedDateStr] ?? null) : null
+  const priceMultiplier = activePricingInfo?.multiplier ?? 1
+  const totalBase = base + addonsTotal + (data.vip ? VIP_PRICE : 0)
+  const total = Math.round(totalBase * priceMultiplier * 100) / 100
   const totalDurationMin = (pkg?.durationMin ?? 0) + selectedAddons.reduce((s, a) => s + a.durationMin, 0)
   const slotsNeeded = Math.ceil(totalDurationMin / 30) || 1
 
@@ -448,14 +494,28 @@ export default function GroomingSection() {
                         <button type="button" onClick={() => setDateOffset(o => Math.min(46, o + 14))} disabled={dateOffset >= 46} style={{ padding: '4px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', cursor: dateOffset >= 46 ? 'not-allowed' : 'pointer', opacity: dateOffset >= 46 ? 0.4 : 1, fontSize: 15 }}>›</button>
                       </div>
                     </div>
+                    {Object.keys(pricing).length > 0 && (
+                      <div style={{ display: 'flex', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} /> Mais barato</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} /> Alta demanda</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} /> Preço premium</span>
+                      </div>
+                    )}
                     <div className="date-grid" style={{ marginBottom: 24 }}>
-                      {dates.map((d, i) => (
-                        <button key={i} type="button" className={`date-cell ${data.date?.day === d.day && data.date?.month === d.month ? 'selected' : ''}`} disabled={d.disabled} onClick={() => update({ date: d, time: null })}>
-                          <div className="date-cell-day">{d.label}</div>
-                          {d.day}
-                          <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{d.month}</div>
-                        </button>
-                      ))}
+                      {dates.map((d, i) => {
+                        const ds = toDateStr(d.date)
+                        const pi = pricing[ds]
+                        return (
+                          <button key={i} type="button" className={`date-cell ${data.date?.day === d.day && data.date?.month === d.month ? 'selected' : ''}`} disabled={d.disabled} onClick={() => update({ date: d, time: null })}>
+                            <div className="date-cell-day">{d.label}</div>
+                            {d.day}
+                            <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{d.month}</div>
+                            {pi && pi.tier !== 'normal' && (
+                              <div style={{ width: 5, height: 5, borderRadius: '50%', background: TIER_COLOR[pi.tier] ?? '#888', margin: '2px auto 0' }} />
+                            )}
+                          </button>
+                        )
+                      })}
                     </div>
                     <span className="gr-label">
                       Horário disponível
@@ -607,7 +667,7 @@ export default function GroomingSection() {
             )}
           </div>
 
-          <Recap data={data} total={total} totalDurationMin={totalDurationMin} previewPro={previewPro} previewProStatus={previewProStatus} pros={pros} />
+          <Recap data={data} total={total} totalBase={totalBase} totalDurationMin={totalDurationMin} previewPro={previewPro} previewProStatus={previewProStatus} pros={pros} pricingInfo={activePricingInfo} />
         </div>
       </div>
     </section>

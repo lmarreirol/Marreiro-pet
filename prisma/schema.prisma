@@ -392,3 +392,17 @@ model SaleItem {
   @@index([saleId])
   @@index([productId])
 }
+
+// ─── Precificação Dinâmica ──────────────────────────���────────────────────────
+model PriceRule {
+  id         String   @id @default(cuid())
+  unitId     String?  // null = todas as unidades
+  type       String   // 'dow' | 'date' | 'range'
+  value      String   // dow: "1,6" | date: "2025-12-25" | range: "2025-01-01,2025-01-07"
+  multiplier Float    // 1.20 = +20%, 0.90 = -10%
+  label      String?  // rótulo exibido no calendário
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([unitId])
+}

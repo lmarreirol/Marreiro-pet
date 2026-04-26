@@ -27,7 +27,8 @@ const NAV_MAIN = [
 
 const NAV_BANHO = [
   { href: '/admin/dashboard', icon: '∿', label: 'Agenda Salão' },
-  { href: '/admin/staff',     icon: '◌', label: 'Equipe', adminOnly: true },
+  { href: '/admin/staff',     icon: '◌', label: 'Equipe',  adminOnly: true },
+  { href: '/admin/precos',    icon: '%', label: 'Preços',   adminOnly: true },
 ]
 
 const NAV_CLINICA = [
