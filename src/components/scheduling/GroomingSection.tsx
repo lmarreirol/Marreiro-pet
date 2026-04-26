@@ -123,8 +123,7 @@ function Recap({ data, total, totalBase, totalDurationMin, previewPro, previewPr
     return 'Sem disponibilidade neste horário'
   }
 
-  const hasAdjust = pricingInfo && pricingInfo.tier !== 'normal'
-  const adjustColor = hasAdjust ? (pricingInfo!.tier === 'cheap' ? '#16a34a' : '#dc2626') : '#111827'
+  const hasDiscount = pricingInfo?.tier === 'cheap'
 
   return (
     <div className="grooming-recap" id="resumo-agendamento">
@@ -147,24 +146,19 @@ function Recap({ data, total, totalBase, totalDurationMin, previewPro, previewPr
       {totalDurationMin > 0 && <div className="recap-row"><span className="k">Duração</span><span className="v">~{totalDurationMin} min</span></div>}
       {data.vip && <div className="recap-row"><span className="k">⭐ Encaixe VIP</span><span className="v" style={{ color: '#EF7720', fontWeight: 800 }}>+ R$ {VIP_PRICE},00</span></div>}
 
-      {/* Ajuste de preço dinâmico */}
-      {hasAdjust && (
-        <div style={{ margin: '8px 0', padding: '8px 12px', borderRadius: 8, background: pricingInfo!.tier === 'cheap' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${pricingInfo!.tier === 'cheap' ? '#bbf7d0' : '#fecaca'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: adjustColor }}>
-            {pricingInfo!.tier === 'cheap' ? '💚' : '🔴'} {pricingInfo!.label}
-          </span>
-          <span style={{ fontSize: 13, fontWeight: 800, color: adjustColor }}>
-            {pricingInfo!.pctChange > 0 ? '+' : ''}{pricingInfo!.pctChange}%
-          </span>
+      {hasDiscount && (
+        <div style={{ margin: '8px 0', padding: '8px 12px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>💚 Desconto</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: '#16a34a' }}>{pricingInfo!.pctChange}%</span>
         </div>
       )}
 
       <div className="recap-total">
         <div className="recap-total-label">Total estimado</div>
-        {hasAdjust && totalBase !== total && (
+        {hasDiscount && totalBase !== total && (
           <div style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>{fmtBRL(totalBase)}</div>
         )}
-        <div className="recap-total-value" style={{ color: adjustColor }}>{fmtBRL(total)}</div>
+        <div className="recap-total-value" style={{ color: hasDiscount ? '#16a34a' : '#111827' }}>{fmtBRL(total)}</div>
         <div className="recap-total-sub">Pague com PIX ou cartão de crédito.</div>
       </div>
     </div>
