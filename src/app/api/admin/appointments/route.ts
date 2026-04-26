@@ -12,10 +12,12 @@ export async function GET(req: NextRequest) {
 
   const where: any = {}
 
-  if (date) {
-    const start = new Date(`${date}T00:00:00.000Z`)
-    const end = new Date(`${date}T23:59:59.999Z`)
-    where.appointmentDate = { gte: start, lte: end }
+  const startDate = searchParams.get('startDate')
+  const endDate = searchParams.get('endDate')
+  if (startDate && endDate) {
+    where.appointmentDate = { gte: new Date(`${startDate}T00:00:00.000Z`), lte: new Date(`${endDate}T23:59:59.999Z`) }
+  } else if (date) {
+    where.appointmentDate = { gte: new Date(`${date}T00:00:00.000Z`), lte: new Date(`${date}T23:59:59.999Z`) }
   }
 
   if (role !== 'ADMIN' && userUnitId) {
