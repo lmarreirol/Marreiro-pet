@@ -30,6 +30,7 @@ export type SmartSuggestion = {
 }
 
 export async function POST(req: NextRequest) {
+  try {
   const body = await req.json()
   const { unitId, pkg, addons = [], petSize = 'medium', date } = body as {
     unitId: string; pkg: string; addons: string[]; petSize: string; date: string
@@ -143,4 +144,8 @@ export async function POST(req: NextRequest) {
   }).slice(0, 5)
 
   return NextResponse.json({ suggestions, duration, slotsNeeded })
+  } catch (err) {
+    console.error('[smart-schedule] error:', err)
+    return NextResponse.json({ suggestions: [], error: String(err) }, { status: 500 })
+  }
 }

@@ -162,12 +162,14 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ unitId, pkg, addons, petSize, date }),
       })
-      const json = await res.json()
-      console.log('[SmartSchedule] payload:', { unitId, pkg, petSize, addons, date })
-      console.log('[SmartSchedule] response:', json)
-      setSmartSuggestions(json.suggestions ?? [])
+      const text = await res.text()
+      let json: { suggestions?: unknown[] } = {}
+      try { json = JSON.parse(text) } catch {
+        console.error('[SmartSchedule] resposta não-JSON:', res.status, text.slice(0, 300))
+      }
+      setSmartSuggestions((json.suggestions ?? []) as { time: string; professional: string; professionalName: string; score: number; reason: string }[])
     } catch (err) {
-      console.error('[SmartSchedule] error:', err)
+      console.error('[SmartSchedule] erro de rede:', err)
     }
     finally { setSmartLoading(false) }
   }
