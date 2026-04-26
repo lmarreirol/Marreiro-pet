@@ -11,20 +11,30 @@ async function requireAdmin() {
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const { id } = await params
-  const body = await req.json()
-  const data: Record<string, unknown> = {}
-  if (body.name !== undefined) data.name = body.name
-  if (body.unitId !== undefined) data.unitId = body.unitId
-  if (body.active !== undefined) data.active = body.active
-  if (body.services !== undefined) data.services = body.services
-  const pro = await prisma.professional.update({ where: { id }, data })
-  return NextResponse.json(pro)
+  try {
+    const { id } = await params
+    const body = await req.json()
+    const data: Record<string, unknown> = {}
+    if (body.name !== undefined) data.name = body.name
+    if (body.unitId !== undefined) data.unitId = body.unitId
+    if (body.active !== undefined) data.active = body.active
+    if (body.services !== undefined) data.services = body.services
+    const pro = await prisma.professional.update({ where: { id }, data })
+    return NextResponse.json(pro)
+  } catch (err) {
+    console.error('[professionals PATCH]', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const { id } = await params
-  await prisma.professional.delete({ where: { id } })
-  return NextResponse.json({ ok: true })
+  try {
+    const { id } = await params
+    await prisma.professional.delete({ where: { id } })
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('[professionals DELETE]', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
 }

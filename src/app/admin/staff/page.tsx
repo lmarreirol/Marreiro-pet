@@ -79,9 +79,17 @@ export default function StaffPage() {
           body: JSON.stringify({ ...form, slug: form.slug || slugify(form.name), services: form.services }),
         }
       )
-      if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Erro ao salvar.'); setSaving(false); return }
+      if (!res.ok) {
+        const text = await res.text()
+        let msg = 'Erro ao salvar.'
+        try { msg = JSON.parse(text).error ?? msg } catch (_e) { /* não era JSON */ }
+        setError(msg)
+        return
+      }
       setModal(null)
       load()
+    } catch (err) {
+      setError('Erro de conexão: ' + String(err))
     } finally {
       setSaving(false)
     }
