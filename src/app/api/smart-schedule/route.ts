@@ -40,6 +40,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unitId, pkg e date são obrigatórios' }, { status: 400 })
   }
 
+  const dateOnly = date.split('T')[0]
+  const dow = new Date(`${dateOnly}T12:00:00`).getDay() // 0 = domingo
+  if (dow === 0) {
+    return NextResponse.json({ suggestions: [], error: 'Não atendemos aos domingos' })
+  }
+
   const duration = calcDuration(pkg, addons, petSize)
   const slotsNeeded = Math.ceil(duration / 30)
 
@@ -54,7 +60,6 @@ export async function POST(req: NextRequest) {
   if (!pros.length) return NextResponse.json({ suggestions: [] })
 
   // Appointments for the day
-  const dateOnly = date.split('T')[0]
   const dayStart = new Date(`${dateOnly}T00:00:00.000Z`)
   const dayEnd   = new Date(`${dateOnly}T23:59:59.999Z`)
   const appts = await prisma.appointment.findMany({

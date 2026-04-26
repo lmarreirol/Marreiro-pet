@@ -451,12 +451,22 @@ export default function Dashboard() {
                           ↺ Recalcular
                         </button>
                       </div>
-                    ) : (
-                      <div style={{ textAlign: 'center', padding: '10px 0', color: '#9ca3af', fontSize: 11 }}>
-                        Nenhuma sugestão.
-                        <button type="button" onClick={() => runSmartSchedule()} style={{ display: 'block', margin: '4px auto 0', background: 'none', border: 'none', fontSize: 10, color: '#EF7720', cursor: 'pointer', fontWeight: 700 }}>↺ Tentar novamente</button>
-                      </div>
-                    )}
+                    ) : (() => {
+                      const [y,m,d] = date.split('-').map(Number)
+                      const isSunday = new Date(y, m-1, d).getDay() === 0
+                      return isSunday ? (
+                        <div style={{ textAlign: 'center', padding: '14px 10px', borderRadius: 9, background: '#fef2f2', border: '1px solid #fecaca' }}>
+                          <div style={{ fontSize: 20, marginBottom: 4 }}>🚫</div>
+                          <div style={{ fontWeight: 800, fontSize: 12, color: '#dc2626' }}>Não atendemos aos domingos</div>
+                          <div style={{ fontSize: 10, color: '#f87171', marginTop: 3 }}>Selecione outro dia no calendário</div>
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '10px 0', color: '#9ca3af', fontSize: 11 }}>
+                          Nenhuma sugestão.
+                          <button type="button" onClick={() => runSmartSchedule()} style={{ display: 'block', margin: '4px auto 0', background: 'none', border: 'none', fontSize: 10, color: '#EF7720', cursor: 'pointer', fontWeight: 700 }}>↺ Tentar novamente</button>
+                        </div>
+                      )
+                    })()}
                   </div>
                 )}
               </div>
