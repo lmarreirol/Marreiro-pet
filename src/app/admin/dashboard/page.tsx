@@ -155,19 +155,23 @@ export default function Dashboard() {
     const pkg = overrides?.pkg ?? bookingForm.pkg
     const petSize = overrides?.petSize ?? bookingForm.petSize
     const addons = overrides?.addons ?? bookingForm.addons
+    const payload = { unitId, pkg, addons, petSize, date }
+    console.log('[SmartSchedule] enviando:', payload)
     setSmartLoading(true)
     setSmartSuggestions([])
     try {
       const res = await fetch('/api/smart-schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unitId, pkg, addons, petSize, date }),
+        body: JSON.stringify(payload),
       })
       const text = await res.text()
-      let json: { suggestions?: unknown[] } = {}
+      let json: { suggestions?: unknown[]; error?: string } = {}
       try { json = JSON.parse(text) } catch {
         console.error('[SmartSchedule] resposta não-JSON:', res.status, text.slice(0, 300))
       }
+      console.log('[SmartSchedule] resposta:', res.status, json)
+      if (json.error) console.error('[SmartSchedule] erro da API:', json.error)
       setSmartSuggestions((json.suggestions ?? []) as { time: string; professional: string; professionalName: string; score: number; reason: string }[])
     } catch (err) {
       console.error('[SmartSchedule] erro de rede:', err)
@@ -177,6 +181,7 @@ export default function Dashboard() {
 
   // Dispara após o estado ser commitado (garante bookingSlot.unitId correto)
   useEffect(() => {
+    console.log('[SmartSchedule] effect disparado, trigger=', smartTrigger, 'bookingSlot=', bookingSlot)
     if (smartTrigger === 0 || !bookingSlot || bookingSlot.slot !== '') return
     runSmartSchedule({ unitId: bookingSlot.unitId, pkg: bookingForm.pkg, petSize: bookingForm.petSize, addons: bookingForm.addons })
   // eslint-disable-next-line react-hooks/exhaustive-deps
