@@ -50,7 +50,7 @@ const NAV_WIP = [
   { href: '/admin/tenants',    icon: '⊡', label: 'Tenants', adminOnly: true },
 ]
 
-function Tooltip({ label, anchorRef }: { label: string; anchorRef: React.RefObject<HTMLSpanElement | null> }) {
+function Tooltip({ label, anchorRef }: { label: string; anchorRef: React.RefObject<HTMLSpanElement | HTMLButtonElement | null> }) {
   const [pos, setPos] = useState({ top: 0, left: 0 })
   useEffect(() => {
     if (anchorRef.current) {
@@ -84,7 +84,7 @@ function Tooltip({ label, anchorRef }: { label: string; anchorRef: React.RefObje
 
 function NavLink({ item, collapsed, active }: { item: { href: string; icon: string; label: string }; collapsed: boolean; active: boolean }) {
   const [hovered, setHovered] = useState(false)
-  const ref = useRef<HTMLSpanElement>(null)
+  const ref = useRef<HTMLSpanElement | null>(null)
   return (
     <span ref={ref} style={{ position: 'relative', display: 'block' }}
       onMouseEnter={() => setHovered(true)}
@@ -111,15 +111,20 @@ function NavLink({ item, collapsed, active }: { item: { href: string; icon: stri
 }
 
 function SectionHeader({ icon, label, collapsed, open, onToggle }: { icon: string; label: string; collapsed: boolean; open: boolean; onToggle: () => void }) {
+  const [hovered, setHovered] = useState(false)
+  const ref = useRef<HTMLButtonElement>(null)
   return (
-    <button onClick={onToggle} style={{
-      width: '100%', background: 'none', border: 'none',
-      cursor: 'pointer',
-      display: 'flex', alignItems: 'center', gap: 8,
-      padding: collapsed ? '6px 0' : '6px 12px',
-      justifyContent: collapsed ? 'center' : 'flex-start',
-      borderRadius: 6, marginBottom: 2,
-    }}>
+    <button ref={ref} onClick={onToggle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: '100%', background: 'none', border: 'none',
+        cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: collapsed ? '6px 0' : '6px 12px',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        borderRadius: 6, marginBottom: 2, position: 'relative',
+      }}>
       {collapsed ? (
         <span style={{ fontSize: 12, color: open ? C.activeText : C.section }}>{icon}</span>
       ) : (
@@ -130,6 +135,7 @@ function SectionHeader({ icon, label, collapsed, open, onToggle }: { icon: strin
           <span style={{ color: C.section, fontSize: 11 }}>{open ? '▾' : '▸'}</span>
         </>
       )}
+      {collapsed && hovered && <Tooltip label={label} anchorRef={ref} />}
     </button>
   )
 }
