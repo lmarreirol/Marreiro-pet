@@ -112,16 +112,16 @@ function NavLink({ item, collapsed, active }: { item: { href: string; icon: stri
 
 function SectionHeader({ icon, label, collapsed, open, onToggle }: { icon: string; label: string; collapsed: boolean; open: boolean; onToggle: () => void }) {
   return (
-    <button onClick={() => !collapsed && onToggle()} style={{
+    <button onClick={onToggle} style={{
       width: '100%', background: 'none', border: 'none',
-      cursor: collapsed ? 'default' : 'pointer',
+      cursor: 'pointer',
       display: 'flex', alignItems: 'center', gap: 8,
       padding: collapsed ? '6px 0' : '6px 12px',
       justifyContent: collapsed ? 'center' : 'flex-start',
       borderRadius: 6, marginBottom: 2,
     }}>
       {collapsed ? (
-        <span style={{ fontSize: 12, color: C.section }}>{icon}</span>
+        <span style={{ fontSize: 12, color: open ? C.activeText : C.section }}>{icon}</span>
       ) : (
         <>
           <span style={{ fontSize: 10, fontWeight: 700, color: C.section, letterSpacing: '0.08em', textTransform: 'uppercase', flex: 1, textAlign: 'left' }}>
@@ -187,7 +187,7 @@ export default function Sidebar() {
       {/* Seção Banho & Tosa */}
       <div style={{ padding: '8px 8px 0', borderBottom: `1px solid ${C.border}` }}>
         <SectionHeader icon="∿" label="Banho & Tosa" collapsed={collapsed} open={banhoOpen} onToggle={() => setBanhoOpen(o => !o)} />
-        {(banhoOpen || collapsed) && (
+        {banhoOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 8 }}>
             {banhoItems.map(item => (
               <NavLink key={item.href} item={item} collapsed={collapsed} active={isActive(item.href)} />
@@ -199,7 +199,7 @@ export default function Sidebar() {
       {/* Seção Clínica Vet */}
       <div style={{ padding: '8px 8px 0', borderBottom: `1px solid ${C.border}` }}>
         <SectionHeader icon="+" label="Clínica Vet" collapsed={collapsed} open={clinicaOpen} onToggle={() => setClinicaOpen(o => !o)} />
-        {(clinicaOpen || collapsed) && (
+        {clinicaOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 8 }}>
             {NAV_CLINICA.map(item => (
               <NavLink key={item.href} item={item} collapsed={collapsed} active={isActive(item.href)} />
@@ -211,7 +211,7 @@ export default function Sidebar() {
       {/* Seção Comunidade */}
       <div style={{ padding: '8px 8px 0', borderBottom: `1px solid ${C.border}` }}>
         <SectionHeader icon="◎" label="Comunidade" collapsed={collapsed} open={communityOpen} onToggle={() => setCommunityOpen(o => !o)} />
-        {(communityOpen || collapsed) && (
+        {communityOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 8 }}>
             {NAV_COMMUNITY.map(item => (
               <NavLink key={item.href} item={item} collapsed={collapsed} active={isActive(item.href)} />
@@ -223,7 +223,7 @@ export default function Sidebar() {
       {/* Seção Em construção */}
       <div style={{ padding: '8px 8px 0', flex: 1 }}>
         <SectionHeader icon="·" label="Em construção" collapsed={collapsed} open={wipOpen} onToggle={() => setWipOpen(o => !o)} />
-        {(wipOpen || collapsed) && (
+        {wipOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 8 }}>
             {wipItems.map(item => (
               <NavLink key={item.href} item={item} collapsed={collapsed} active={isActive(item.href)} />
@@ -236,7 +236,7 @@ export default function Sidebar() {
       {isAdmin && (
         <div style={{ padding: '6px 8px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
           <SectionHeader icon="⚙" label={String(user?.name ?? 'Configurações')} collapsed={collapsed} open={configOpen} onToggle={() => setConfigOpen(o => !o)} />
-          {(configOpen || collapsed) && (
+          {configOpen && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 4 }}>
               <NavLink item={{ href: '/admin/settings', icon: '👥', label: 'Usuários' }} collapsed={collapsed} active={isActive('/admin/settings')} />
               <span style={{ position: 'relative', display: 'block' }}>
