@@ -159,7 +159,7 @@ export default function Sidebar() {
     pathname === href || (href !== '/admin/overview' && pathname.startsWith(href))
 
   return (
-    <aside style={{
+    <aside onDoubleClick={() => setCollapsed(c => !c)} style={{
       width: collapsed ? 52 : 180,
       minHeight: '100vh',
       background: C.bg,
