@@ -98,7 +98,7 @@ function NavLink({ item, collapsed, active }: { item: { href: string; icon: stri
         background: active ? 'rgba(59,130,246,0.12)' : 'transparent',
         color: active ? '#fff' : C.text,
         fontWeight: active ? 600 : 400,
-        fontSize: '0.85rem',
+        fontSize: '0.92rem',
         transition: 'all 0.15s',
         borderLeft: active ? `3px solid #A855F7` : '3px solid transparent',
       }}>
@@ -129,7 +129,7 @@ function SectionHeader({ icon, label, collapsed, open, onToggle }: { icon: strin
         <span style={{ fontSize: 12, color: open ? C.activeText : C.section }}>{icon}</span>
       ) : (
         <>
-          <span style={{ fontSize: 10, fontWeight: 700, color: C.section, letterSpacing: '0.08em', textTransform: 'uppercase', flex: 1, textAlign: 'left' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: C.section, letterSpacing: '0.06em', textTransform: 'uppercase', flex: 1, textAlign: 'left' }}>
             {icon} {label}
           </span>
           <span style={{ color: C.section, fontSize: 11 }}>{open ? '▾' : '▸'}</span>
