@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import SettingsModal from './SettingsModal'
 
 // Paleta Tarly
 const C = {
@@ -151,6 +152,7 @@ export default function Sidebar() {
   const [communityOpen, setCommunityOpen] = useState(true)
   const [wipOpen, setWipOpen] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
 
   const banhoItems = NAV_BANHO.filter(n => !('adminOnly' in n) || !n.adminOnly || isAdmin)
 
@@ -244,7 +246,21 @@ export default function Sidebar() {
           <SectionHeader icon="⚙" label={String(user?.name ?? 'Configurações')} collapsed={collapsed} open={configOpen} onToggle={() => setConfigOpen(o => !o)} />
           {configOpen && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 4 }}>
-              <NavLink item={{ href: '/admin/settings', icon: '👥', label: 'Usuários' }} collapsed={collapsed} active={isActive('/admin/settings')} />
+              {/* Configurações → abre modal */}
+              <span style={{ position: 'relative', display: 'block' }}>
+                <button onClick={() => setShowSettingsModal(true)} style={{
+                  width: '100%', background: 'transparent', border: 'none', borderLeft: '3px solid transparent',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: collapsed ? '10px 0' : '9px 12px',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  borderRadius: 7, cursor: 'pointer',
+                  color: C.text, fontSize: '0.92rem', fontWeight: 400,
+                }}>
+                  <span style={{ fontSize: 15, flexShrink: 0, color: C.text }}>⚙</span>
+                  {!collapsed && <span>Configurações</span>}
+                </button>
+              </span>
+              {/* Sair */}
               <span style={{ position: 'relative', display: 'block' }}>
                 <button onClick={() => signOut({ callbackUrl: '/admin/login' })} style={{
                   width: '100%', background: 'transparent', border: 'none', borderLeft: '3px solid transparent',
@@ -252,7 +268,7 @@ export default function Sidebar() {
                   padding: collapsed ? '10px 0' : '9px 12px',
                   justifyContent: collapsed ? 'center' : 'flex-start',
                   borderRadius: 7, cursor: 'pointer',
-                  color: C.text, fontSize: '0.85rem', fontWeight: 400,
+                  color: C.text, fontSize: '0.92rem', fontWeight: 400,
                 }}>
                   <span style={{ fontSize: 15, flexShrink: 0, color: C.text }}>←</span>
                   {!collapsed && <span>Sair</span>}
@@ -262,6 +278,8 @@ export default function Sidebar() {
           )}
         </div>
       )}
+
+      {showSettingsModal && <SettingsModal onClose={() => setShowSettingsModal(false)} />}
     </aside>
   )
 }
