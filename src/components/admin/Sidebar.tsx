@@ -231,32 +231,25 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Configurações */}
+      {/* Configurações + Sair */}
       {isAdmin && (
         <div style={{ padding: '6px 8px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
           <NavLink item={{ href: '/admin/settings', icon: '⚙', label: 'Configurações' }} collapsed={collapsed} active={isActive('/admin/settings')} />
+          <span style={{ position: 'relative', display: 'block' }}>
+            <button onClick={() => signOut({ callbackUrl: '/admin/login' })} style={{
+              width: '100%', background: 'transparent', border: 'none', borderLeft: '3px solid transparent',
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: collapsed ? '10px 0' : '9px 12px',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              borderRadius: 7, cursor: 'pointer',
+              color: C.text, fontSize: '0.85rem', fontWeight: 400,
+            }}>
+              <span style={{ fontSize: 15, flexShrink: 0 }}>←</span>
+              {!collapsed && <span>Sair</span>}
+            </button>
+          </span>
         </div>
       )}
-
-      {/* User */}
-      <div style={{ padding: collapsed ? '12px 0' : '12px 14px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
-        {!collapsed && (
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {String(user?.name ?? '')}
-            </div>
-            <div style={{ fontSize: '0.7rem', color: C.section }}>{String(user?.role ?? '')}</div>
-          </div>
-        )}
-        <button onClick={() => signOut({ callbackUrl: '/admin/login' })} style={{
-          width: '100%', background: C.userBg, border: `1px solid ${C.border}`, borderRadius: 6,
-          color: C.text, fontSize: '0.8rem',
-          padding: collapsed ? '8px 0' : '8px 12px',
-          cursor: 'pointer', textAlign: collapsed ? 'center' : 'left',
-        }}>
-          {collapsed ? '←' : '← Sair'}
-        </button>
-      </div>
     </aside>
   )
 }

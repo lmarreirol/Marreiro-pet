@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useSession, signOut } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 type UserRow = { id: string; username: string; name: string; role: string; unitId: string | null }
@@ -97,20 +97,15 @@ export default function SettingsPage() {
       </div>
 
       {/* Abas */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '2px solid #f3f4f6', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button style={{
-            padding: '8px 18px', background: 'none', border: 'none', cursor: 'pointer',
-            fontWeight: 700, fontSize: 14,
-            color: activeTab === 'users' ? '#004A99' : '#6b7280',
-            borderBottom: activeTab === 'users' ? '2px solid #004A99' : '2px solid transparent',
-            marginBottom: -2,
-          }}>
-            👥 Usuários
-          </button>
-        </div>
-        <button onClick={() => signOut({ callbackUrl: '/admin/login' })} style={{ padding: '6px 16px', borderRadius: 8, background: '#fef2f2', color: '#dc2626', fontSize: 13, fontWeight: 700, cursor: 'pointer', border: '1.5px solid #fecaca', marginBottom: 4 }}>
-          ← Sair
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '2px solid #f3f4f6' }}>
+        <button style={{
+          padding: '8px 18px', background: 'none', border: 'none', cursor: 'pointer',
+          fontWeight: 700, fontSize: 14,
+          color: activeTab === 'users' ? '#004A99' : '#6b7280',
+          borderBottom: activeTab === 'users' ? '2px solid #004A99' : '2px solid transparent',
+          marginBottom: -2,
+        }}>
+          👥 Usuários
         </button>
       </div>
 
