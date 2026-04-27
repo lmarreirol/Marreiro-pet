@@ -144,6 +144,7 @@ export default function Sidebar() {
   const [clinicaOpen, setClinicaOpen] = useState(true)
   const [communityOpen, setCommunityOpen] = useState(true)
   const [wipOpen, setWipOpen] = useState(false)
+  const [configOpen, setConfigOpen] = useState(false)
 
   const banhoItems = NAV_BANHO.filter(n => !('adminOnly' in n) || !n.adminOnly || isAdmin)
 
@@ -231,23 +232,28 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Configurações + Sair */}
+      {/* Configurações (expansível) */}
       {isAdmin && (
         <div style={{ padding: '6px 8px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
-          <NavLink item={{ href: '/admin/settings', icon: '⚙', label: 'Configurações' }} collapsed={collapsed} active={isActive('/admin/settings')} />
-          <span style={{ position: 'relative', display: 'block' }}>
-            <button onClick={() => signOut({ callbackUrl: '/admin/login' })} style={{
-              width: '100%', background: 'transparent', border: 'none', borderLeft: '3px solid transparent',
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: collapsed ? '10px 0' : '9px 12px',
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              borderRadius: 7, cursor: 'pointer',
-              color: C.text, fontSize: '0.85rem', fontWeight: 400,
-            }}>
-              <span style={{ fontSize: 15, flexShrink: 0 }}>←</span>
-              {!collapsed && <span>Sair</span>}
-            </button>
-          </span>
+          <SectionHeader icon="⚙" label="Configurações" collapsed={collapsed} open={configOpen} onToggle={() => setConfigOpen(o => !o)} />
+          {(configOpen || collapsed) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 4 }}>
+              <NavLink item={{ href: '/admin/settings', icon: '👥', label: 'Usuários' }} collapsed={collapsed} active={isActive('/admin/settings')} />
+              <span style={{ position: 'relative', display: 'block' }}>
+                <button onClick={() => signOut({ callbackUrl: '/admin/login' })} style={{
+                  width: '100%', background: 'transparent', border: 'none', borderLeft: '3px solid transparent',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: collapsed ? '10px 0' : '9px 12px',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  borderRadius: 7, cursor: 'pointer',
+                  color: C.text, fontSize: '0.85rem', fontWeight: 400,
+                }}>
+                  <span style={{ fontSize: 15, flexShrink: 0, color: C.text }}>←</span>
+                  {!collapsed && <span>Sair</span>}
+                </button>
+              </span>
+            </div>
+          )}
         </div>
       )}
     </aside>
