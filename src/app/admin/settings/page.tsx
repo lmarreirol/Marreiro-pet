@@ -93,22 +93,24 @@ export default function SettingsPage() {
   return (
     <div style={{ padding: '2rem', maxWidth: 860, margin: '0 auto' }}>
       <div style={{ marginBottom: '1.75rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827', margin: '0 0 10px' }}>Configurações</h1>
-        <button onClick={() => signOut({ callbackUrl: '/admin/login' })} style={{ padding: '8px 18px', borderRadius: 8, background: '#fef2f2', color: '#dc2626', fontSize: 13, fontWeight: 700, cursor: 'pointer', border: '1.5px solid #fecaca' }}>
-          ← Sair
-        </button>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827', margin: 0 }}>Configurações</h1>
       </div>
 
       {/* Abas */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '2px solid #f3f4f6' }}>
-        <button style={{
-          padding: '8px 18px', background: 'none', border: 'none', cursor: 'pointer',
-          fontWeight: 700, fontSize: 14,
-          color: activeTab === 'users' ? '#004A99' : '#6b7280',
-          borderBottom: activeTab === 'users' ? '2px solid #004A99' : '2px solid transparent',
-          marginBottom: -2,
-        }}>
-          👥 Usuários
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '2px solid #f3f4f6', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button style={{
+            padding: '8px 18px', background: 'none', border: 'none', cursor: 'pointer',
+            fontWeight: 700, fontSize: 14,
+            color: activeTab === 'users' ? '#004A99' : '#6b7280',
+            borderBottom: activeTab === 'users' ? '2px solid #004A99' : '2px solid transparent',
+            marginBottom: -2,
+          }}>
+            👥 Usuários
+          </button>
+        </div>
+        <button onClick={() => signOut({ callbackUrl: '/admin/login' })} style={{ padding: '6px 16px', borderRadius: 8, background: '#fef2f2', color: '#dc2626', fontSize: 13, fontWeight: 700, cursor: 'pointer', border: '1.5px solid #fecaca', marginBottom: 4 }}>
+          ← Sair
         </button>
       </div>
 
