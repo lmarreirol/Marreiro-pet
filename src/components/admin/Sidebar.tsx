@@ -235,7 +235,7 @@ export default function Sidebar() {
       {/* Configurações (expansível) */}
       {isAdmin && (
         <div style={{ padding: '6px 8px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
-          <SectionHeader icon="⚙" label="Configurações" collapsed={collapsed} open={configOpen} onToggle={() => setConfigOpen(o => !o)} />
+          <SectionHeader icon="⚙" label={String(user?.name ?? 'Configurações')} collapsed={collapsed} open={configOpen} onToggle={() => setConfigOpen(o => !o)} />
           {(configOpen || collapsed) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingBottom: 4 }}>
               <NavLink item={{ href: '/admin/settings', icon: '👥', label: 'Usuários' }} collapsed={collapsed} active={isActive('/admin/settings')} />
