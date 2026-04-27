@@ -9,15 +9,15 @@ import { createPortal } from 'react-dom'
 // Paleta Tarly
 const C = {
   bg:        '#031544',   // azul marinho profundo
-  border:    'rgba(255,255,255,0.07)',
+  border:    'rgba(255,255,255,0.10)',
   active:    '#3B82F6',   // azul tech
   activeText:'#ffffff',
   accent:    '#A855F7',   // roxo inovação
-  text:      'rgba(255,255,255,0.55)',
-  textHover: 'rgba(255,255,255,0.85)',
-  section:   '#64748B',   // cinza institucional
-  toggle:    'rgba(255,255,255,0.25)',
-  userBg:    'rgba(255,255,255,0.06)',
+  text:      'rgba(255,255,255,0.82)',
+  textHover: '#ffffff',
+  section:   '#94a3b8',   // cinza mais claro
+  toggle:    'rgba(255,255,255,0.35)',
+  userBg:    'rgba(255,255,255,0.08)',
 }
 
 const NAV_MAIN = [
